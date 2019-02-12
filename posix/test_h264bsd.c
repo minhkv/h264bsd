@@ -8,8 +8,16 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-#include "../src/h264bsd_decoder.h"
-#include "../src/h264bsd_util.h"
+#include "src/h264bsd_decoder.h"
+#include "src/h264bsd_util.h"
+
+#include <stdlib.h>
+#include <assert.h>
+#include <highgui.h>
+
+#include "src/h264bsd_decoder.h"
+#include "src/h264bsd_util.h"
+#include "yuv.h"
 
 static char* outputPath = NULL;
 static char* comparePath = NULL;
@@ -57,6 +65,78 @@ void savePic(u8* picData, int width, int height, int picNum) {
   while (offset < picSize) {
     offset += fwrite(picData + offset, sizeof(u8), picSize - offset, outputFile);
   }
+}
+
+
+void showPic(u8* picData, int width, int height, int picNum) {
+  FILE *fin = NULL;
+  struct YUV_Capture cap;
+  enum YUV_ReturnValue ret;
+  IplImage *bgr;
+  
+  fin = fopen(outputPath, "rb");
+  
+  ret = YUV_init(fin, width, height, &cap);
+  assert(ret == YUV_OK);
+
+  bgr = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 3);
+  assert(bgr);
+
+  for (; ;)
+  {
+    ret = YUV_read(&cap);
+    if (ret == YUV_EOF)
+    {
+        cvWaitKey(0);
+        break;
+    }
+    else if (ret == YUV_IO_ERROR)
+    {
+        fprintf(stderr, "I/O error\n");
+        break;
+    }
+    cvCvtColor(cap.ycrcb, bgr, CV_YCrCb2BGR);
+    cvShowImage("frame", bgr);
+    cvWaitKey(35);
+  }
+}
+
+void YUV_read_and_show(u8* picData, int width, int height, int picNum) {
+  IplImage *bgr;
+  bgr = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 3);
+  // Init
+  IplImage *ycrcb = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+  IplImage *y = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+  IplImage *cb = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+  IplImage *cr = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+  IplImage *cb_half = cvCreateImage(cvSize(width/2, height/2), IPL_DEPTH_8U, 1);
+  IplImage *cr_half = cvCreateImage(cvSize(width/2, height/2), IPL_DEPTH_8U, 1);
+  
+  // Decode and show
+  size_t bytes_read;
+  size_t npixels;
+  
+  npixels = width*height;
+  int current = 0;
+  for (int i = current; i < npixels * sizeof(uint8_t); i++) {
+    *(y->imageData + i) = *(picData + i);
+    current++;
+  }
+  
+  for (int i = 0; i < npixels * sizeof(uint8_t) / 4; i++) {
+    *(cb_half->imageData + i) = *(picData + current + i);
+  }
+
+  for (int i = 0; i < npixels * sizeof(uint8_t) / 4; i++) {
+    *(cr_half->imageData + i) = *(picData + current + i);
+  }
+
+  cvResize(cb_half, cb, CV_INTER_CUBIC);
+  cvResize(cr_half, cr, CV_INTER_CUBIC);
+  cvMerge(y, cr, cb, NULL, ycrcb);
+  cvCvtColor(ycrcb, bgr, CV_YCrCb2BGR);
+  cvShowImage("frame", bgr);
+  cvWaitKey(100);
 }
 
 static FILE *compareFile = NULL;
@@ -154,6 +234,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         ++numPics;
         if (outputPath) savePic(pic, width, height, numPics);
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
+        YUV_read_and_show(pic, width, height, numPics);
         break;
       case H264BSD_HDRS_RDY:
         h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);

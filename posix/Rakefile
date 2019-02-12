@@ -7,6 +7,11 @@ else
   CC_FLAGS = ENV["CC_FLAGS"] || "-O3 -D_ERROR_PRINT"
 end
 
+CC_FLAGS += "-Wall -ggdb `pkg-config --cflags opencv libavcodec libavformat \
+libavutil libswscale`"
+CC_FLAGS += "-lm `pkg-config --libs opencv libavcodec libavformat libavutil \
+libswscale`"
+
 static_lib = "lib/libh264bsd.a"
 test_app = "bin/test_h264bsd"
 
@@ -16,16 +21,16 @@ directory "lib"
 directory "include"
 directory "../test/output"
 
-# Convert .c file in ../src to .o file in obj
-rule ".o" => ->(o_file) {[o_file.gsub(/o$/, 'c').gsub("obj/", "../src/"), "obj"]} do |t|
-  sh "#{CC} #{t.source} -c #{CC_FLAGS} -o #{t.name}"
+# Convert .c file in src to .o file in obj
+rule ".o" => ->(o_file) {[o_file.gsub(/o$/, 'c').gsub("obj/", "src/"), "obj"]} do |t|
+  sh "#{CC} -g #{t.source} -c #{CC_FLAGS} -o #{t.name}"
 end
 
-# Use all .c files in the ../src directory
-o_files = FileList["../src/*.c"].gsub(/c$/, 'o').gsub("../src/", "obj/")
+# Use all .c files in the src directory
+o_files = FileList["src/*.c"].gsub(/c$/, 'o').gsub("src/", "obj/")
 
-# Copy all .h files in the ../src directory
-h_files = FileList["../src/*.h"].gsub("../src/", "include/")
+# Copy all .h files in the src directory
+h_files = FileList["src/*.h"].gsub("src/", "include/")
 
 # Build static lib
 file static_lib => o_files + ["lib"] do |t|
@@ -33,7 +38,7 @@ file static_lib => o_files + ["lib"] do |t|
 end
 
 # Copy header files
-rule /include\/.*\.h/ => ->(dst) { [dst.gsub("include/", "../src/"), "include"] } do |t|
+rule /include\/.*\.h/ => ->(dst) { [dst.gsub("include/", "src/"), "include"] } do |t|
   FileUtils.cp t.source, t.name, :verbose => true
 end
 
@@ -41,7 +46,7 @@ task :static_lib => h_files + [static_lib]
 
 # Build test application
 file test_app => [:static_lib, "test_h264bsd.c", "bin"] do |t|
-  sh "#{CC} test_h264bsd.c #{CC_FLAGS} -Llib -lh264bsd -o #{test_app}"
+  sh "#{CC} -g test_h264bsd.c yuv.c yuv.h #{CC_FLAGS} -Llib -lh264bsd -o #{test_app}"
 end
 
 # Run test application
@@ -66,7 +71,7 @@ end
 
 # Run test application decoding repeatedy until stopped
 task :test_output => [test_app] do |t|
-  sh "#{test_app} -o ../test/test_1920x1080_posix.yuv ../test/test_1920x1080.h264"
+  sh "#{test_app} -o ../test/test_640x360_posix.yuv ../test/test_640x360.h264"
 end
 
 task :clean do
