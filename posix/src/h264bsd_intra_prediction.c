@@ -479,52 +479,52 @@ u32 h264bsdIntraPrediction(mbStorage_t *pMb, macroblockLayer_t *mbLayer,
     image_t *image, u32 mbNum, u32 constrainedIntraPred, u8 *data)
 {
 
-// /* Variables */
+/* Variables */
 
-//     /* pelAbove and pelLeft contain samples above and left to the current
-//      * macroblock. Above array contains also sample above-left to the current
-//      * mb as well as 4 samples above-right to the current mb (latter only for
-//      * luma) */
-//     /* lumD + lumB + lumC + cbD + cbB + crD + crB */
-//     u8 pelAbove[1 + 16 + 4 + 1 + 8 + 1 + 8];
-//     /* lumA + cbA + crA */
-//     u8 pelLeft[16 + 8 + 8];
-//     u32 tmp;
+    /* pelAbove and pelLeft contain samples above and left to the current
+     * macroblock. Above array contains also sample above-left to the current
+     * mb as well as 4 samples above-right to the current mb (latter only for
+     * luma) */
+    /* lumD + lumB + lumC + cbD + cbB + crD + crB */
+    u8 pelAbove[1 + 16 + 4 + 1 + 8 + 1 + 8];
+    /* lumA + cbA + crA */
+    u8 pelLeft[16 + 8 + 8];
+    u32 tmp;
 
-// /* Code */
+/* Code */
 
-//     ASSERT(pMb);
-//     ASSERT(image);
-//     ASSERT(mbNum < image->width * image->height);
-//     ASSERT(h264bsdMbPartPredMode(pMb->mbType) != PRED_MODE_INTER);
+    ASSERT(pMb);
+    ASSERT(image);
+    ASSERT(mbNum < image->width * image->height);
+    ASSERT(h264bsdMbPartPredMode(pMb->mbType) != PRED_MODE_INTER);
 
-//     h264bsdGetNeighbourPels(image, pelAbove, pelLeft, mbNum);
+    h264bsdGetNeighbourPels(image, pelAbove, pelLeft, mbNum);
 
-//     if (h264bsdMbPartPredMode(pMb->mbType) == PRED_MODE_INTRA16x16)
-//     {
-//         tmp = h264bsdIntra16x16Prediction(pMb, data, mbLayer->residual.level,
-//             pelAbove, pelLeft, constrainedIntraPred);
-//         if (tmp != HANTRO_OK)
-//             return(tmp);
-//     }
-//     else
-//     {
-//         tmp = h264bsdIntra4x4Prediction(pMb, data, mbLayer,
-//             pelAbove, pelLeft, constrainedIntraPred);
-//         if (tmp != HANTRO_OK)
-//             return(tmp);
-//     }
+    if (h264bsdMbPartPredMode(pMb->mbType) == PRED_MODE_INTRA16x16)
+    {
+        tmp = h264bsdIntra16x16Prediction(pMb, data, mbLayer->residual.level,
+            pelAbove, pelLeft, constrainedIntraPred);
+        if (tmp != HANTRO_OK)
+            return(tmp);
+    }
+    else
+    {
+        tmp = h264bsdIntra4x4Prediction(pMb, data, mbLayer,
+            pelAbove, pelLeft, constrainedIntraPred);
+        if (tmp != HANTRO_OK)
+            return(tmp);
+    }
 
-//     tmp = h264bsdIntraChromaPrediction(pMb, data + 256,
-//             mbLayer->residual.level+16, pelAbove + 21, pelLeft + 16,
-//             mbLayer->mbPred.intraChromaPredMode, constrainedIntraPred);
-//     if (tmp != HANTRO_OK)
-//         return(tmp);
+    tmp = h264bsdIntraChromaPrediction(pMb, data + 256,
+            mbLayer->residual.level+16, pelAbove + 21, pelLeft + 16,
+            mbLayer->mbPred.intraChromaPredMode, constrainedIntraPred);
+    if (tmp != HANTRO_OK)
+        return(tmp);
 
-//     /* if decoded flag > 1 -> mb has already been successfully decoded and
-//      * written to output -> do not write again */
-//     if (pMb->decoded > 1)
-//         return HANTRO_OK;
+    /* if decoded flag > 1 -> mb has already been successfully decoded and
+     * written to output -> do not write again */
+    if (pMb->decoded > 1)
+        return HANTRO_OK;
 
     h264bsdWriteMacroblock(image, data);
 

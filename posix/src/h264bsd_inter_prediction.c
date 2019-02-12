@@ -362,111 +362,111 @@ u32 h264bsdInterPrediction(mbStorage_t *pMb, macroblockLayer_t *pMbLayer,
     dpbStorage_t *dpb, u32 mbNum, image_t *currImage, u8 *data)
 {
 
-// /* Variables */
+/* Variables */
 
-//     u32 i;
-//     u32 x, y;
-//     u32 row, col;
-//     subMbPartMode_e subPartMode;
-//     image_t refImage;
+    u32 i;
+    u32 x, y;
+    u32 row, col;
+    subMbPartMode_e subPartMode;
+    image_t refImage;
 
-// /* Code */
+/* Code */
 
-//     ASSERT(pMb);
-//     ASSERT(h264bsdMbPartPredMode(pMb->mbType) == PRED_MODE_INTER);
-//     ASSERT(pMbLayer);
+    ASSERT(pMb);
+    ASSERT(h264bsdMbPartPredMode(pMb->mbType) == PRED_MODE_INTER);
+    ASSERT(pMbLayer);
 
-//     row = mbNum / currImage->width;
-//     col = mbNum - row * currImage->width;
-//     row *= 16;
-//     col *= 16;
+    row = mbNum / currImage->width;
+    col = mbNum - row * currImage->width;
+    row *= 16;
+    col *= 16;
 
-//     refImage.width = currImage->width;
-//     refImage.height = currImage->height;
+    refImage.width = currImage->width;
+    refImage.height = currImage->height;
 
-//     switch (pMb->mbType)
-//     {
-//         case P_Skip:
-//         case P_L0_16x16:
-//             if (MvPrediction16x16(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
-//                 return(HANTRO_NOK);
-//             refImage.data = pMb->refAddr[0];
-//             h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
-//                 16, 16);
-//             break;
+    switch (pMb->mbType)
+    {
+        case P_Skip:
+        case P_L0_16x16:
+            if (MvPrediction16x16(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
+                return(HANTRO_NOK);
+            refImage.data = pMb->refAddr[0];
+            h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
+                16, 16);
+            break;
 
-//         case P_L0_L0_16x8:
-//             if ( MvPrediction16x8(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
-//                 return(HANTRO_NOK);
-//             refImage.data = pMb->refAddr[0];
-//             h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
-//                 16, 8);
-//             refImage.data = pMb->refAddr[2];
-//             h264bsdPredictSamples(data, pMb->mv+8, &refImage, col, row, 0, 8,
-//                 16, 8);
-//             break;
+        case P_L0_L0_16x8:
+            if ( MvPrediction16x8(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
+                return(HANTRO_NOK);
+            refImage.data = pMb->refAddr[0];
+            h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
+                16, 8);
+            refImage.data = pMb->refAddr[2];
+            h264bsdPredictSamples(data, pMb->mv+8, &refImage, col, row, 0, 8,
+                16, 8);
+            break;
 
-//         case P_L0_L0_8x16:
-//             if ( MvPrediction8x16(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
-//                 return(HANTRO_NOK);
-//             refImage.data = pMb->refAddr[0];
-//             h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
-//                 8, 16);
-//             refImage.data = pMb->refAddr[1];
-//             h264bsdPredictSamples(data, pMb->mv+4, &refImage, col, row, 8, 0,
-//                 8, 16);
-//             break;
+        case P_L0_L0_8x16:
+            if ( MvPrediction8x16(pMb, &pMbLayer->mbPred, dpb) != HANTRO_OK)
+                return(HANTRO_NOK);
+            refImage.data = pMb->refAddr[0];
+            h264bsdPredictSamples(data, pMb->mv, &refImage, col, row, 0, 0,
+                8, 16);
+            refImage.data = pMb->refAddr[1];
+            h264bsdPredictSamples(data, pMb->mv+4, &refImage, col, row, 8, 0,
+                8, 16);
+            break;
 
-//         default: /* P_8x8 and P_8x8ref0 */
-//             if ( MvPrediction8x8(pMb, &pMbLayer->subMbPred, dpb) != HANTRO_OK)
-//                 return(HANTRO_NOK);
-//             for (i = 0; i < 4; i++)
-//             {
-//                 refImage.data = pMb->refAddr[i];
-//                 subPartMode =
-//                     h264bsdSubMbPartMode(pMbLayer->subMbPred.subMbType[i]);
-//                 x = i & 0x1 ? 8 : 0;
-//                 y = i < 2 ? 0 : 8;
-//                 switch (subPartMode)
-//                 {
-//                     case MB_SP_8x8:
-//                         h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
-//                             col, row, x, y, 8, 8);
-//                         break;
+        default: /* P_8x8 and P_8x8ref0 */
+            if ( MvPrediction8x8(pMb, &pMbLayer->subMbPred, dpb) != HANTRO_OK)
+                return(HANTRO_NOK);
+            for (i = 0; i < 4; i++)
+            {
+                refImage.data = pMb->refAddr[i];
+                subPartMode =
+                    h264bsdSubMbPartMode(pMbLayer->subMbPred.subMbType[i]);
+                x = i & 0x1 ? 8 : 0;
+                y = i < 2 ? 0 : 8;
+                switch (subPartMode)
+                {
+                    case MB_SP_8x8:
+                        h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
+                            col, row, x, y, 8, 8);
+                        break;
 
-//                     case MB_SP_8x4:
-//                         h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
-//                             col, row, x, y, 8, 4);
-//                         h264bsdPredictSamples(data, pMb->mv+4*i+2, &refImage,
-//                             col, row, x, y+4, 8, 4);
-//                         break;
+                    case MB_SP_8x4:
+                        h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
+                            col, row, x, y, 8, 4);
+                        h264bsdPredictSamples(data, pMb->mv+4*i+2, &refImage,
+                            col, row, x, y+4, 8, 4);
+                        break;
 
-//                     case MB_SP_4x8:
-//                         h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
-//                             col, row, x, y, 4, 8);
-//                         h264bsdPredictSamples(data, pMb->mv+4*i+1, &refImage,
-//                             col, row, x+4, y, 4, 8);
-//                         break;
+                    case MB_SP_4x8:
+                        h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
+                            col, row, x, y, 4, 8);
+                        h264bsdPredictSamples(data, pMb->mv+4*i+1, &refImage,
+                            col, row, x+4, y, 4, 8);
+                        break;
 
-//                     default:
-//                         h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
-//                             col, row, x, y, 4, 4);
-//                         h264bsdPredictSamples(data, pMb->mv+4*i+1, &refImage,
-//                             col, row, x+4, y, 4, 4);
-//                         h264bsdPredictSamples(data, pMb->mv+4*i+2, &refImage,
-//                             col, row, x, y+4, 4, 4);
-//                         h264bsdPredictSamples(data, pMb->mv+4*i+3, &refImage,
-//                             col, row, x+4, y+4, 4, 4);
-//                         break;
-//                 }
-//             }
-//             break;
-//     }
+                    default:
+                        h264bsdPredictSamples(data, pMb->mv+4*i, &refImage,
+                            col, row, x, y, 4, 4);
+                        h264bsdPredictSamples(data, pMb->mv+4*i+1, &refImage,
+                            col, row, x+4, y, 4, 4);
+                        h264bsdPredictSamples(data, pMb->mv+4*i+2, &refImage,
+                            col, row, x, y+4, 4, 4);
+                        h264bsdPredictSamples(data, pMb->mv+4*i+3, &refImage,
+                            col, row, x+4, y+4, 4, 4);
+                        break;
+                }
+            }
+            break;
+    }
 
-//     /* if decoded flag > 1 -> mb has already been successfully decoded and
-//      * written to output -> do not write again */
-//     if (pMb->decoded > 1)
-//         return HANTRO_OK;
+    /* if decoded flag > 1 -> mb has already been successfully decoded and
+     * written to output -> do not write again */
+    if (pMb->decoded > 1)
+        return HANTRO_OK;
 
     if (pMb->mbType != P_Skip)
     {

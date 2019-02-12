@@ -235,6 +235,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         if (outputPath) savePic(pic, width, height, numPics);
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
         YUV_read_and_show(pic, width, height, numPics);
+        cvWaitKey(0);
         break;
       case H264BSD_HDRS_RDY:
         h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);
