@@ -156,37 +156,37 @@ u32 h264bsdProcessBlock(i32 *data, u32 qp, u32 skip, u32 coeffMap)
         data[11] = (d3 * tmp2);
 
         /* horizontal transform */
-        // for (row = 4, ptr = data; row--; ptr += 4)
-        // {
-        //     tmp0 = ptr[0] + ptr[2];
-        //     tmp1 = ptr[0] - ptr[2];
-        //     tmp2 = (ptr[1] >> 1) - ptr[3];
-        //     tmp3 = ptr[1] + (ptr[3] >> 1);
-        //     ptr[0] = tmp0 + tmp3;
-        //     ptr[1] = tmp1 + tmp2;
-        //     ptr[2] = tmp1 - tmp2;
-        //     ptr[3] = tmp0 - tmp3;
-        // }
+        for (row = 4, ptr = data; row--; ptr += 4)
+        {
+            tmp0 = ptr[0] + ptr[2];
+            tmp1 = ptr[0] - ptr[2];
+            tmp2 = (ptr[1] >> 1) - ptr[3];
+            tmp3 = ptr[1] + (ptr[3] >> 1);
+            ptr[0] = tmp0 + tmp3;
+            ptr[1] = tmp1 + tmp2;
+            ptr[2] = tmp1 - tmp2;
+            ptr[3] = tmp0 - tmp3;
+        }
 
-        // /*lint +e661 +e662*/
-        // /* then vertical transform */
-        // for (col = 4; col--; data++)
-        // {
-        //     tmp0 = data[0] + data[8];
-        //     tmp1 = data[0] - data[8];
-        //     tmp2 = (data[4] >> 1) - data[12];
-        //     tmp3 = data[4] + (data[12] >> 1);
-        //     data[0 ] = (tmp0 + tmp3 + 32)>>6;
-        //     data[4 ] = (tmp1 + tmp2 + 32)>>6;
-        //     data[8 ] = (tmp1 - tmp2 + 32)>>6;
-        //     data[12] = (tmp0 - tmp3 + 32)>>6;
-        //     /* check that each value is in the range [-512,511] */
-        //     if (((u32)(data[0] + 512) > 1023) ||
-        //         ((u32)(data[4] + 512) > 1023) ||
-        //         ((u32)(data[8] + 512) > 1023) ||
-        //         ((u32)(data[12] + 512) > 1023) )
-        //         return(HANTRO_NOK);
-        // }
+        /*lint +e661 +e662*/
+        /* then vertical transform */
+        for (col = 4; col--; data++)
+        {
+            tmp0 = data[0] + data[8];
+            tmp1 = data[0] - data[8];
+            tmp2 = (data[4] >> 1) - data[12];
+            tmp3 = data[4] + (data[12] >> 1);
+            data[0 ] = (tmp0 + tmp3 + 32)>>6;
+            data[4 ] = (tmp1 + tmp2 + 32)>>6;
+            data[8 ] = (tmp1 - tmp2 + 32)>>6;
+            data[12] = (tmp0 - tmp3 + 32)>>6;
+            /* check that each value is in the range [-512,511] */
+            if (((u32)(data[0] + 512) > 1023) ||
+                ((u32)(data[4] + 512) > 1023) ||
+                ((u32)(data[8] + 512) > 1023) ||
+                ((u32)(data[12] + 512) > 1023) )
+                return(HANTRO_NOK);
+        }
     }
     else /* rows 1, 2 and 3 are zero */
     {
@@ -288,52 +288,52 @@ void h264bsdProcessLumaDc(i32 *data, u32 qp)
     data[13] = tmp0;
 
     /* horizontal transform */
-    // for (row = 4, ptr = data; row--; ptr += 4)
-    // {
-    //     tmp0 = ptr[0] + ptr[2];
-    //     tmp1 = ptr[0] - ptr[2];
-    //     tmp2 = ptr[1] - ptr[3];
-    //     tmp3 = ptr[1] + ptr[3];
-    //     ptr[0] = tmp0 + tmp3;
-    //     ptr[1] = tmp1 + tmp2;
-    //     ptr[2] = tmp1 - tmp2;
-    //     ptr[3] = tmp0 - tmp3;
-    // }
+    for (row = 4, ptr = data; row--; ptr += 4)
+    {
+        tmp0 = ptr[0] + ptr[2];
+        tmp1 = ptr[0] - ptr[2];
+        tmp2 = ptr[1] - ptr[3];
+        tmp3 = ptr[1] + ptr[3];
+        ptr[0] = tmp0 + tmp3;
+        ptr[1] = tmp1 + tmp2;
+        ptr[2] = tmp1 - tmp2;
+        ptr[3] = tmp0 - tmp3;
+    }
 
-    // /*lint +e661 +e662*/
-    // /* then vertical transform and inverse scaling */
-    // levScale = levelScale[ qpMod ][0];
-    // if (qp >= 12)
-    // {
-    //     levScale <<= (qpDiv-2);
-    //     for (col = 4; col--; data++)
-    //     {
-    //         tmp0 = data[0] + data[8 ];
-    //         tmp1 = data[0] - data[8 ];
-    //         tmp2 = data[4] - data[12];
-    //         tmp3 = data[4] + data[12];
-    //         data[0 ] = ((tmp0 + tmp3)*levScale);
-    //         data[4 ] = ((tmp1 + tmp2)*levScale);
-    //         data[8 ] = ((tmp1 - tmp2)*levScale);
-    //         data[12] = ((tmp0 - tmp3)*levScale);
-    //     }
-    // }
-    // else
-    // {
-    //     i32 tmp;
-    //     tmp = ((1 - qpDiv) == 0) ? 1 : 2;
-    //     for (col = 4; col--; data++)
-    //     {
-    //         tmp0 = data[0] + data[8 ];
-    //         tmp1 = data[0] - data[8 ];
-    //         tmp2 = data[4] - data[12];
-    //         tmp3 = data[4] + data[12];
-    //         data[0 ] = ((tmp0 + tmp3)*levScale+tmp) >> (2-qpDiv);
-    //         data[4 ] = ((tmp1 + tmp2)*levScale+tmp) >> (2-qpDiv);
-    //         data[8 ] = ((tmp1 - tmp2)*levScale+tmp) >> (2-qpDiv);
-    //         data[12] = ((tmp0 - tmp3)*levScale+tmp) >> (2-qpDiv);
-    //     }
-    // }
+    /*lint +e661 +e662*/
+    /* then vertical transform and inverse scaling */
+    levScale = levelScale[ qpMod ][0];
+    if (qp >= 12)
+    {
+        levScale <<= (qpDiv-2);
+        for (col = 4; col--; data++)
+        {
+            tmp0 = data[0] + data[8 ];
+            tmp1 = data[0] - data[8 ];
+            tmp2 = data[4] - data[12];
+            tmp3 = data[4] + data[12];
+            data[0 ] = ((tmp0 + tmp3)*levScale);
+            data[4 ] = ((tmp1 + tmp2)*levScale);
+            data[8 ] = ((tmp1 - tmp2)*levScale);
+            data[12] = ((tmp0 - tmp3)*levScale);
+        }
+    }
+    else
+    {
+        i32 tmp;
+        tmp = ((1 - qpDiv) == 0) ? 1 : 2;
+        for (col = 4; col--; data++)
+        {
+            tmp0 = data[0] + data[8 ];
+            tmp1 = data[0] - data[8 ];
+            tmp2 = data[4] - data[12];
+            tmp3 = data[4] + data[12];
+            data[0 ] = ((tmp0 + tmp3)*levScale+tmp) >> (2-qpDiv);
+            data[4 ] = ((tmp1 + tmp2)*levScale+tmp) >> (2-qpDiv);
+            data[8 ] = ((tmp1 - tmp2)*levScale+tmp) >> (2-qpDiv);
+            data[12] = ((tmp0 - tmp3)*levScale+tmp) >> (2-qpDiv);
+        }
+    }
 
 }
 

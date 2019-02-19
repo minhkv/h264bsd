@@ -18,6 +18,8 @@
 #include "src/h264bsd_decoder.h"
 #include "src/h264bsd_util.h"
 #include "yuv.h"
+#include "minih264/minih264e.h"
+// #include "minih264/minih264e_test.c"
 
 static char* outputPath = NULL;
 static char* comparePath = NULL;
