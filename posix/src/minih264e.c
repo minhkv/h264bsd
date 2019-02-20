@@ -45,10 +45,6 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
     int i, frames = 0;
     const char *fnin, *fnout;
 
-    if(fout == NULL) {
-        fout = fopen("out.264", "wb");
-    }
-
     memset(cmdline, 0, sizeof(*cmdline));
     cmdline->gop = DEFAULT_GOP;
     cmdline->qp = DEFAULT_QP;

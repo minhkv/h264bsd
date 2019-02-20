@@ -191,7 +191,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   u32 picId, isIdrPic, numErrMbs;
   u32 top, left, width, height, croppingFlag;
   int totalErrors = 0;
-  fout = NULL;
+  FILE *fout = fopen("out.264", "wb");
   while (len > 0) {
     u32 result = h264bsdDecode(&dec, byteStrm, len, 0, &readBytes);
     len -= readBytes;
