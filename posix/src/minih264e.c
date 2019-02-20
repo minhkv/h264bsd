@@ -40,13 +40,15 @@ struct
 } cmdline[1];
 
 
-int encode(int width, int height, u8 *buf_in, FILE *fout)
+int encode(int width, int height, uint8_t *buf_in, FILE *fout)
 {
     int i, frames = 0;
     const char *fnin, *fnout;
-    u8* pic;
-    u32 picId, isIdrPic, numErrMbs;
-    dpbOutPicture_t *buf;
+
+    if(fout == NULL) {
+        fout = fopen("out.264", "wb");
+    }
+
     memset(cmdline, 0, sizeof(*cmdline));
     cmdline->gop = DEFAULT_GOP;
     cmdline->qp = DEFAULT_QP;

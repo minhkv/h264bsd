@@ -176,7 +176,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   u32 status;
   storage_t dec;
   status = h264bsdInit(&dec, HANTRO_FALSE);
-  fout = fopen("out.264", "wb");
+  
 
   if (status != HANTRO_OK) {
     fprintf(stderr, "h264bsdInit failed\n");
@@ -191,7 +191,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   u32 picId, isIdrPic, numErrMbs;
   u32 top, left, width, height, croppingFlag;
   int totalErrors = 0;
-
+  fout = NULL;
   while (len > 0) {
     u32 result = h264bsdDecode(&dec, byteStrm, len, 0, &readBytes);
     len -= readBytes;
@@ -207,8 +207,6 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         }
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
         YUV_read_and_show(pic, width, height, numPics);
-
-        
         break;
       case H264BSD_HDRS_RDY:
         h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);
