@@ -18,8 +18,8 @@
 #include "src/h264bsd_decoder.h"
 #include "src/h264bsd_util.h"
 #include "yuv.h"
-#include "minih264/minih264e.h"
-// #include "minih264/minih264e_test.c"
+#include "src/minih264e.h"
+#include "src/minih264e.c"
 
 static char* outputPath = NULL;
 static char* comparePath = NULL;
@@ -69,40 +69,6 @@ void savePic(u8* picData, int width, int height, int picNum) {
   }
 }
 
-
-void showPic(u8* picData, int width, int height, int picNum) {
-  FILE *fin = NULL;
-  struct YUV_Capture cap;
-  enum YUV_ReturnValue ret;
-  IplImage *bgr;
-  
-  fin = fopen(outputPath, "rb");
-  
-  ret = YUV_init(fin, width, height, &cap);
-  assert(ret == YUV_OK);
-
-  bgr = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 3);
-  assert(bgr);
-
-  for (; ;)
-  {
-    ret = YUV_read(&cap);
-    if (ret == YUV_EOF)
-    {
-        cvWaitKey(0);
-        break;
-    }
-    else if (ret == YUV_IO_ERROR)
-    {
-        fprintf(stderr, "I/O error\n");
-        break;
-    }
-    cvCvtColor(cap.ycrcb, bgr, CV_YCrCb2BGR);
-    cvShowImage("frame", bgr);
-    cvWaitKey(35);
-  }
-}
-
 void YUV_read_and_show(u8* picData, int width, int height, int picNum) {
   IplImage *bgr;
   bgr = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 3);
@@ -138,7 +104,7 @@ void YUV_read_and_show(u8* picData, int width, int height, int picNum) {
   cvMerge(y, cr, cb, NULL, ycrcb);
   cvCvtColor(ycrcb, bgr, CV_YCrCb2BGR);
   cvShowImage("frame", bgr);
-  cvWaitKey(100);
+  cvWaitKey(10);
 }
 
 static FILE *compareFile = NULL;
@@ -210,6 +176,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   u32 status;
   storage_t dec;
   status = h264bsdInit(&dec, HANTRO_FALSE);
+  fout = fopen("out.264", "wb");
 
   if (status != HANTRO_OK) {
     fprintf(stderr, "h264bsdInit failed\n");
@@ -234,10 +201,14 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
       case H264BSD_PIC_RDY:
         pic = h264bsdNextOutputPicture(&dec, &picId, &isIdrPic, &numErrMbs);
         ++numPics;
-        if (outputPath) savePic(pic, width, height, numPics);
+        if (outputPath) {
+          savePic(pic, width, height, numPics);
+          encode(width, height, pic, fout);
+        }
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
         YUV_read_and_show(pic, width, height, numPics);
-        cvWaitKey(0);
+
+        
         break;
       case H264BSD_HDRS_RDY:
         h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);
@@ -259,6 +230,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         exit(1);
     }
   }
+  fclose(fout);
 
   h264bsdShutdown(&dec);
 

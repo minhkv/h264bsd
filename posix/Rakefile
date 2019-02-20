@@ -46,7 +46,7 @@ task :static_lib => h_files + [static_lib]
 
 # Build test application
 file test_app => [:static_lib, "test_h264bsd.c", "bin"] do |t|
-  sh "#{CC} -g test_h264bsd.c yuv.c yuv.h #{CC_FLAGS} -Llib -lh264bsd -o #{test_app}"
+  sh "#{CC} -g test_h264bsd.c yuv.c yuv.h #{CC_FLAGS} -Llib -lh264bsd -o #{test_app} -lm"
 end
 
 # Run test application
