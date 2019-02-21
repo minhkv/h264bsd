@@ -36,7 +36,6 @@
 #include "h264bsd_image.h"
 #include "h264bsd_util.h"
 #include "h264bsd_neighbour.h"
-#include "showImage.h"
 
 /*------------------------------------------------------------------------------
     2. External compiler flags

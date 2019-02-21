@@ -20,6 +20,8 @@
 #include "yuv.h"
 #include "src/minih264e.h"
 #include "src/minih264e.c"
+#include "src/showImage.h"
+#include "src/showImage.c"
 
 static char* outputPath = NULL;
 static char* comparePath = NULL;
@@ -69,50 +71,6 @@ void savePic(u8* picData, int width, int height, int picNum) {
   }
 }
 
-void YUV_read_and_show(u8* picData, int width, int height, int picNum) {
-  IplImage *bgr;
-  bgr = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 3);
-  // Init
-  IplImage *ycrcb = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
-  IplImage *y = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
-  IplImage *cb = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
-  IplImage *cr = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
-  IplImage *cb_half = cvCreateImage(cvSize(width/2, height/2), IPL_DEPTH_8U, 1);
-  IplImage *cr_half = cvCreateImage(cvSize(width/2, height/2), IPL_DEPTH_8U, 1);
-  
-  // Decode and show
-  size_t bytes_read;
-  size_t npixels;
-  
-  npixels = width*height;
-  int current = 0;
-  for (int i = current; i < npixels * sizeof(uint8_t); i++) {
-    *(y->imageData + i) = *(picData + i);
-    current++;
-  }
-  
-  for (int i = 0; i < npixels * sizeof(uint8_t) / 4; i++) {
-    *(cb_half->imageData + i) = *(picData + current + i);
-  }
-
-  for (int i = 0; i < npixels * sizeof(uint8_t) / 4; i++) {
-    *(cr_half->imageData + i) = *(picData + current + i);
-  }
-
-  cvResize(cb_half, cb, CV_INTER_CUBIC);
-  cvResize(cr_half, cr, CV_INTER_CUBIC);
-  cvMerge(y, cr, cb, NULL, ycrcb);
-  cvCvtColor(ycrcb, bgr, CV_YCrCb2BGR);
-  cvShowImage("frame", bgr);
-  cvReleaseImage(&ycrcb);
-  cvReleaseImage(&y);
-  cvReleaseImage(&cb);
-  cvReleaseImage(&cr);
-  cvReleaseImage(&cb_half);
-  cvReleaseImage(&cr_half);
-  cvReleaseImage(&bgr);
-  cvWaitKey(10);
-}
 
 static FILE *compareFile = NULL;
 static u8* expectedData = NULL;
@@ -197,7 +155,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   u32 picId, isIdrPic, numErrMbs;
   u32 top, left, width, height, croppingFlag;
   int totalErrors = 0;
-  FILE *fout = fopen("out.264", "wb");
+  FILE *fout = fopen("../out.264", "wb");
   while (len > 0) {
     u32 result = h264bsdDecode(&dec, byteStrm, len, 0, &readBytes);
     len -= readBytes;
@@ -210,16 +168,15 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         if (outputPath) {
           savePic(pic, width, height, numPics);
         }
-        // encode(width, height, pic, fout);
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
-        YUV_read_and_show(pic, width, height, numPics);
+        YUV_read_and_show(pic, 640, 368, numPics);
         break;
       case H264BSD_HDRS_RDY:
         h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);
-        if (!croppingFlag) {
+        // if (!croppingFlag) {
           width = h264bsdPicWidth(&dec) * 16;
           height = h264bsdPicHeight(&dec) * 16;
-        }
+        // }
         char* cropped = croppingFlag ? "(cropped) " : "";
         printf("Decoded headers. Image size %s%dx%d.\n", cropped, width, height);
         break;
@@ -235,7 +192,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   }
   fclose(outputFile);
   outputFile = fopen(outputPath, "r");
-  encode(width, height, outputFile, fout);
+  encode(640, 368, outputFile, fout);
   fclose(fout);
 
   h264bsdShutdown(&dec);

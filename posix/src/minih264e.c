@@ -22,7 +22,7 @@ H264E_io_yuv_t yuv;
 uint8_t *buf_in, *buf_save;
 uint8_t *coded_data;
 FILE *fin, *fout;
-int sizeof_coded_data, frame_size, g_w, g_h, _qp;
+int sizeof_coded_data, frame_size, width, height, _qp;
 
 #ifdef _WIN32
 // only vs2017 have aligned_alloc
@@ -146,7 +146,7 @@ static int read_cmdline_options()
 typedef struct
 {
     const char *size_name;
-    int g_w;
+    int width;
     int h;
 } frame_size_descriptor_t;
 
@@ -211,7 +211,7 @@ static int guess_format_from_name(const char *file_name, int *w, int *h)
         {
             if (!strncmp(file_name + i, fmt->size_name, strlen(fmt->size_name)))
             {
-                *w = fmt->g_w;
+                *w = fmt->width;
                 *h = fmt->h;
                 found = 1;
             }
@@ -359,23 +359,6 @@ int encode(int width, int height, FILE *fin, FILE *fout)
     fnin  = "out.yuv";
     fnout = "out.264";
 
-    if (!cmdline->gen)
-    {
-        g_w = 640;
-        g_h = 360;
-        // guess_format_from_name(fnin, &g_w, &g_h);
-        // fin = fopen(fnin, "rb");
-        // if (!fin)
-        // {
-            // printf("ERROR: cant open input file %s\n", fnin);
-            // return 1;
-        // }
-    } else
-    {
-        g_w = 1024;
-        g_h = 768;
-    }
-
     if (!fnout)
         fnout = "out.264";
 
@@ -386,8 +369,8 @@ int encode(int width, int height, FILE *fin, FILE *fout)
     create_param.inter_layer_pred_flag = 0;
 #endif
     create_param.gop = cmdline->gop;
-    create_param.height = g_h;
-    create_param.width  = g_w;
+    create_param.height = height;
+    create_param.width  = width;
     create_param.max_long_term_reference_frames = 0;
 #if ENABLE_TEMPORAL_SCALABILITY
     create_param.max_long_term_reference_frames = MAX_LONG_TERM_FRAMES;
@@ -411,7 +394,7 @@ int encode(int width, int height, FILE *fin, FILE *fout)
     }
 #endif
 
-    frame_size = g_w*g_h*3/2;
+    frame_size = width*height*3/2;
     buf_in   = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
     // buf_save = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
 
@@ -450,16 +433,16 @@ int encode(int width, int height, FILE *fin, FILE *fout)
             // if (!fin)
             // {
             //     if (i > 300) break;
-            //     memset(buf_in + g_w*g_h, 128, g_w*g_h/2);
-            //     gen_chessboard_rot(buf_in, g_w, g_h, i);
+            //     memset(buf_in + width*height, 128, width*height/2);
+            //     gen_chessboard_rot(buf_in, width, height, i);
             // } else
             //     if (!fread(buf_in, frame_size, 1, fin)) break;
             // if (cmdline->psnr)
             //     memcpy(buf_save, buf_in, frame_size);
             if (!fread(buf_in, frame_size, 1, fin)) break;
-            yuv.yuv[0] = buf_in; yuv.stride[0] = g_w;
-            yuv.yuv[1] = buf_in + g_w*g_h; yuv.stride[1] = g_w/2;
-            yuv.yuv[2] = buf_in + g_w*g_h*5/4; yuv.stride[2] = g_w/2;
+            yuv.yuv[0] = buf_in; yuv.stride[0] = width;
+            yuv.yuv[1] = buf_in + width*height; yuv.stride[1] = width/2;
+            yuv.yuv[2] = buf_in + width*height*5/4; yuv.stride[2] = width/2;
 
             run_param.frame_type = 0;
             run_param.encode_speed = cmdline->speed;
@@ -530,7 +513,7 @@ int encode(int width, int height, FILE *fin, FILE *fout)
                 }
             }
             // if (cmdline->psnr)
-                // psnr_add(buf_save, buf_in, g_w, g_h, sizeof_coded_data);
+                // psnr_add(buf_save, buf_in, width, height, sizeof_coded_data);
         }
         //fprintf(stderr, "%d avr = %6d  [%6d %6d]\n", qp, sum_bytes/299, min_bytes, max_bytes);
 

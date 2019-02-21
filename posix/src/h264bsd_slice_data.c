@@ -185,7 +185,7 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
             currImage, pStorage->dpb, &qpY, currMbAddr,
             pStorage->activePps->constrainedIntraPredFlag, data);
-        YUV_read_and_show1(currImage, 640, 360, 0);
+        
         if (tmp != HANTRO_OK)
         {
             EPRINT("MACRO_BLOCK");
@@ -219,7 +219,6 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         }
 
     } while (moreMbs);
-
     if ((pStorage->slice->numDecodedMbs + mbCount) > pStorage->picSizeInMbs)
     {
         EPRINT("Num decoded mbs");

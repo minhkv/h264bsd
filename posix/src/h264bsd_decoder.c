@@ -55,6 +55,7 @@
 #include "h264bsd_deblocking.h"
 #include "h264bsd_conceal.h"
 #include "h264bsd_storage.h"
+#include "showImage.h"
 
 /*------------------------------------------------------------------------------
     2. External compiler flags
@@ -264,7 +265,7 @@ u32 h264bsdDecode(storage_t *pStorage, u8 *byteStrm, u32 len, u32 picId,
         }
         pStorage->skipRedundantSlices = HANTRO_FALSE;
     }
-
+    
     if (!picReady)
     {
         switch (nalUnit.nalUnitType)
@@ -446,6 +447,7 @@ u32 h264bsdDecode(storage_t *pStorage, u8 *byteStrm, u32 len, u32 picId,
                         pStorage->sliceHeader->firstMbInSlice));
                 tmp = h264bsdDecodeSliceData(&strm, pStorage,
                     pStorage->currImage, pStorage->sliceHeader);
+                
                 if (tmp != HANTRO_OK)
                 {
                     EPRINT("SLICE_DATA");
@@ -469,7 +471,6 @@ u32 h264bsdDecode(storage_t *pStorage, u8 *byteStrm, u32 len, u32 picId,
                 DEBUG(("NOT IMPLEMENTED YET %d\n",nalUnit.nalUnitType));
         }
     }
-
     if (picReady)
     {
         h264bsdFilterPicture(pStorage->currImage, pStorage->mb);
@@ -503,7 +504,6 @@ u32 h264bsdDecode(storage_t *pStorage, u8 *byteStrm, u32 len, u32 picId,
                     pStorage->currentPicId, pStorage->numConcealedMbs);
             }
         }
-
         pStorage->picStarted = HANTRO_FALSE;
         pStorage->validSliceInAccessUnit = HANTRO_FALSE;
 
