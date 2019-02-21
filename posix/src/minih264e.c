@@ -348,10 +348,11 @@ static void gen_chessboard_rot(unsigned char *p, int w, int h, int frm)
     }
 }
 
-int encode(int width, int height, uint8_t *buf_in, FILE *fout)
+int encode(int width, int height, FILE *fin, FILE *fout)
 {
     int i, frames = 0;
     const char *fnin, *fnout;
+    uint8_t *buf_in;
 
     if (!read_cmdline_options())
         return 1;
@@ -362,7 +363,7 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
     {
         g_w = 640;
         g_h = 360;
-        guess_format_from_name(fnin, &g_w, &g_h);
+        // guess_format_from_name(fnin, &g_w, &g_h);
         // fin = fopen(fnin, "rb");
         // if (!fin)
         // {
@@ -411,7 +412,7 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
 #endif
 
     frame_size = g_w*g_h*3/2;
-    // buf_in   = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
+    buf_in   = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
     // buf_save = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
 
     // if (!buf_in || !buf_save)
@@ -443,11 +444,8 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
         enc     = (H264E_persist_t *)ALIGNED_ALLOC(64, sizeof_persist);
         scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
         error = H264E_init(enc, &create_param);
-
-        // if (fin)
-        //     fseek(fin, 0, SEEK_SET);
-
-        // for (i = 0; cmdline->max_frames; i++)
+        
+        for (i = 0; cmdline->max_frames; i++)
         {
             // if (!fin)
             // {
@@ -458,7 +456,7 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
             //     if (!fread(buf_in, frame_size, 1, fin)) break;
             // if (cmdline->psnr)
             //     memcpy(buf_save, buf_in, frame_size);
-
+            if (!fread(buf_in, frame_size, 1, fin)) break;
             yuv.yuv[0] = buf_in; yuv.stride[0] = g_w;
             yuv.yuv[1] = buf_in + g_w*g_h; yuv.stride[1] = g_w/2;
             yuv.yuv[2] = buf_in + g_w*g_h*5/4; yuv.stride[2] = g_w/2;
@@ -536,9 +534,9 @@ int encode(int width, int height, uint8_t *buf_in, FILE *fout)
         }
         //fprintf(stderr, "%d avr = %6d  [%6d %6d]\n", qp, sum_bytes/299, min_bytes, max_bytes);
 
-        if (cmdline->psnr)
-            psnr_print(psnr_get());
-
+        // if (cmdline->psnr)
+            // psnr_print(psnr_get());
+        free(buf_in);
         if (enc)
             free(enc);
         if (scratch)

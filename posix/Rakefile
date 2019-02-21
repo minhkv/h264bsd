@@ -74,6 +74,12 @@ task :test_output => [test_app] do |t|
   sh "#{test_app} -o ../test/test_640x360_posix.yuv ../test/test_640x360.h264"
 end
 
+# Run test application decoding repeatedy until stopped
+task :test_fitness => [test_app] do |t|
+  sh "#{test_app} -o ../test/fitness.yuv /home/minhkv/Documents/OWS/fitness.264"
+end
+
+
 task :clean do
   FileUtils.rm_rf("obj")
   FileUtils.rm_rf("bin")

@@ -203,7 +203,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         if (outputPath) {
           savePic(pic, width, height, numPics);
         }
-        encode(width, height, pic, fout);
+        // encode(width, height, pic, fout);
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
         YUV_read_and_show(pic, width, height, numPics);
         break;
@@ -226,6 +226,9 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         exit(1);
     }
   }
+  fclose(outputFile);
+  outputFile = fopen(outputPath, "r");
+  encode(width, height, outputFile, fout);
   fclose(fout);
 
   h264bsdShutdown(&dec);
