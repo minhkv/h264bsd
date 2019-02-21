@@ -36,6 +36,7 @@
 #include "h264bsd_image.h"
 #include "h264bsd_util.h"
 #include "h264bsd_neighbour.h"
+#include "showImage.h"
 
 /*------------------------------------------------------------------------------
     2. External compiler flags
@@ -55,8 +56,6 @@ extern const u8 h264bsdClip[];
 /*------------------------------------------------------------------------------
     4. Local function prototypes
 ------------------------------------------------------------------------------*/
-
-
 
 /*------------------------------------------------------------------------------
 
@@ -140,7 +139,6 @@ void h264bsdWriteMacroblock(image_t *image, u8 *data)
         *cr++ = tmp2;
         cr += width-2;
     }
-
 }
 #endif
 #ifndef H264DEC_OMXDL

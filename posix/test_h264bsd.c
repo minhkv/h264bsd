@@ -104,6 +104,13 @@ void YUV_read_and_show(u8* picData, int width, int height, int picNum) {
   cvMerge(y, cr, cb, NULL, ycrcb);
   cvCvtColor(ycrcb, bgr, CV_YCrCb2BGR);
   cvShowImage("frame", bgr);
+  cvReleaseImage(&ycrcb);
+  cvReleaseImage(&y);
+  cvReleaseImage(&cb);
+  cvReleaseImage(&cr);
+  cvReleaseImage(&cb_half);
+  cvReleaseImage(&cr_half);
+  cvReleaseImage(&bgr);
   cvWaitKey(10);
 }
 
