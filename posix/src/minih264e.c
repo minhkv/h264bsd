@@ -8,7 +8,7 @@
 #include "minih264e.h"
 
 #define DEFAULT_GOP 20
-#define DEFAULT_QP 33
+#define DEFAULT_QP 20
 #define DEFAULT_DENOISE 0
 
 #define ENABLE_TEMPORAL_SCALABILITY 0
