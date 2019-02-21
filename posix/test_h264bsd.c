@@ -177,7 +177,6 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   storage_t dec;
   status = h264bsdInit(&dec, HANTRO_FALSE);
   
-
   if (status != HANTRO_OK) {
     fprintf(stderr, "h264bsdInit failed\n");
     exit(1);
@@ -203,8 +202,8 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         ++numPics;
         if (outputPath) {
           savePic(pic, width, height, numPics);
-          encode(width, height, pic, fout);
         }
+        encode(width, height, pic, fout);
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
         YUV_read_and_show(pic, width, height, numPics);
         break;
@@ -214,7 +213,6 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
           width = h264bsdPicWidth(&dec) * 16;
           height = h264bsdPicHeight(&dec) * 16;
         }
-
         char* cropped = croppingFlag ? "(cropped) " : "";
         printf("Decoded headers. Image size %s%dx%d.\n", cropped, width, height);
         break;
