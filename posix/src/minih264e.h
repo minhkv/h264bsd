@@ -8968,33 +8968,36 @@ static void encode_sps(h264e_enc_t *enc, int profile_idc)
 */
 static void encode_pps2(h264e_enc_t *enc, storage_t dec)
 {
-//     nal_start(enc, 0x68);
-//  //   U(10, 0x338);       // constant shortcut:
-//     UE(enc->param.sps_id*4 + pps_id);  // pic_parameter_set_id         1
-//     UE(enc->param.sps_id);  // seq_parameter_set_id         1
-//     U1(0);  // entropy_coding_mode_flag     0
-//     U1(0);  // pic_order_present_flag       0
-//     UE(0);  // num_slice_groups_minus1      1
-//     UE(0);  // num_ref_idx_l0_active_minus1 1
-//     UE(0);  // num_ref_idx_l1_active_minus1 1
-//     U1(0);  // weighted_pred_flag           0
-//     U(2,0); // weighted_bipred_idc          00
-//     SE(enc->sps.pic_init_qp - 26);  // pic_init_qp_minus26
-// #if DQP_CHROMA
+    seqParamSet_t *sps = dec.activeSps;
+    picParamSet_t *pps = dec.activePps;
+    nal_start(enc, 0x68);
+ //   U(10, 0x338);       // constant shortcut:
+    UE(sps->seqParameterSetId*4 + pps->picParameterSetId);  // pic_parameter_set_id         1
+    UE(sps->seqParameterSetId);  // seq_parameter_set_id         1
+    U1(0);  // entropy_coding_mode_flag     0
+    U1(pps->picOrderPresentFlag);  // pic_order_present_flag       0
+    UE(pps->numSliceGroups - 1);  // num_slice_groups_minus1      1
+    UE(0);  // num_ref_idx_l0_active_minus1 1
+    // UE(0);  // num_ref_idx_l1_active_minus1 1
+    // U(2, pps->numRefIdxL0Active - 1);
+    U1(0);  // weighted_pred_flag           0
+    U(2,0); // weighted_bipred_idc          00
+    SE(enc->sps.pic_init_qp - 26);  // pic_init_qp_minus26
+#if DQP_CHROMA
+    SE(0);  // pic_init_qs_minus26                    1
+    SE(DQP_CHROMA);  // chroma_qp_index_offset        1
+    U1(pps->deblockingFilterControlPresentFlag);  // deblocking_filter_control_present_flag 1
+    U1(pps->constrainedIntraPredFlag);  // constrained_intra_pred_flag            0
+    U1(pps->redundantPicCntPresentFlag);  // redundant_pic_cnt_present_flag         0
+#else
+    U(5, 0x1C);         // constant shortcut:
 //     SE(0);  // pic_init_qs_minus26                    1
-//     SE(DQP_CHROMA);  // chroma_qp_index_offset        1
+//     SE(0);  // chroma_qp_index_offset                 1
 //     U1(1);  // deblocking_filter_control_present_flag 1
 //     U1(0);  // constrained_intra_pred_flag            0
 //     U1(0);  // redundant_pic_cnt_present_flag         0
-// #else
-//     U(5, 0x1C);         // constant shortcut:
-// //     SE(0);  // pic_init_qs_minus26                    1
-// //     SE(0);  // chroma_qp_index_offset                 1
-// //     U1(1);  // deblocking_filter_control_present_flag 1
-// //     U1(0);  // constrained_intra_pred_flag            0
-// //     U1(0);  // redundant_pic_cnt_present_flag         0
-// #endif
-//     nal_end(enc);
+#endif
+    nal_end(enc);
 }
 
 static void encode_pps(h264e_enc_t *enc, int pps_id)
@@ -11651,7 +11654,8 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         {
             // encode_sps(enc, 66);
             encode_sps2(enc, dec);
-            encode_pps(enc, 0);
+            // encode_pps(enc, 0);
+            encode_pps2(enc, dec);
         }
     } else
     {
