@@ -192,7 +192,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   }
   fclose(outputFile);
   outputFile = fopen(outputPath, "r");
-  encode(width, height, outputFile, fout);
+  encode(width, height, outputFile, fout, dec);
   fclose(fout);
 
   h264bsdShutdown(&dec);

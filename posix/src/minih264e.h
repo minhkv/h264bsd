@@ -1,3 +1,4 @@
+#include "h264bsd_storage.h"
 #ifndef MINIH264_H
 #define MINIH264_H
 /*
@@ -294,7 +295,8 @@ int H264E_encode(
     const H264E_run_param_t *run_param, ///< run-time parameters
     H264E_io_yuv_t *frame,              ///< Input video frame
     unsigned char **coded_data,         ///< [OUT] Pointer to coded data
-    int *sizeof_coded_data              ///< [OUT] Size of coded data
+    int *sizeof_coded_data,              ///< [OUT] Size of coded data
+    storage_t dec
 );
 
 /**
@@ -8836,7 +8838,27 @@ static void nal_end(h264e_enc_t *enc)
 #define quality_id 0
 #define default_base_mode_flag 0
 #define log2_max_frame_num_minus4 1
-
+static void encode_sps2(h264e_enc_t *enc, storage_t dec) {
+    seqParamSet_t *sps = dec.activeSps;
+    nal_start(enc, 0x67 | (sps->profileIdc == SCALABLE_BASELINE)*8);
+    U(8, sps->profileIdc);  // profile, 66 = baseline
+    U(8, 0);
+    U(8, sps->levelIdc);
+    UE(sps->seqParameterSetId);
+    UE(log2_max_frame_num_minus4);  // log2_max_frame_num_minus4  1 UE(0);  // log2_max_frame_num_minus4  1
+    UE(sps->picOrderCntType);  // pic_order_cnt_type         011
+    UE(sps->numRefFrames);  // num_ref_frames
+    U1(sps->gapsInFrameNumValueAllowedFlag);                                      // gaps_in_frame_num_value_allowed_flag);
+    UE(sps->picWidthInMbs - 1);     // pic_width_in_mbs_minus1
+    UE(sps->picHeightInMbs - 1);    // pic_height_in_map_units_minus1
+    U(3, 6 + sps->frameCroppingFlag);         // frame_mbs_only_flag|direct_8x8_inference_flag|frame_cropping_flag
+    UE(sps->frameCropLeftOffset);                                          // frame_crop_left_offset
+    UE(sps->frameCropRightOffset);     // frame_crop_right_offset
+    UE(sps->frameCropTopOffset);                                          // frame_crop_top_offset
+    UE(sps->frameCropBottomOffset);    // frame_crop_bottom_offset
+    U1(0);                     // vui_parameters_present_flag
+    nal_end(enc);
+}
 static void encode_sps(h264e_enc_t *enc, int profile_idc)
 {
     struct limit_t
@@ -8944,6 +8966,37 @@ static void encode_sps(h264e_enc_t *enc, int profile_idc)
 *   Encode Picture Parameter Set (SPS)
 *   ref: [1] 7.3.2.2
 */
+static void encode_pps2(h264e_enc_t *enc, storage_t dec)
+{
+//     nal_start(enc, 0x68);
+//  //   U(10, 0x338);       // constant shortcut:
+//     UE(enc->param.sps_id*4 + pps_id);  // pic_parameter_set_id         1
+//     UE(enc->param.sps_id);  // seq_parameter_set_id         1
+//     U1(0);  // entropy_coding_mode_flag     0
+//     U1(0);  // pic_order_present_flag       0
+//     UE(0);  // num_slice_groups_minus1      1
+//     UE(0);  // num_ref_idx_l0_active_minus1 1
+//     UE(0);  // num_ref_idx_l1_active_minus1 1
+//     U1(0);  // weighted_pred_flag           0
+//     U(2,0); // weighted_bipred_idc          00
+//     SE(enc->sps.pic_init_qp - 26);  // pic_init_qp_minus26
+// #if DQP_CHROMA
+//     SE(0);  // pic_init_qs_minus26                    1
+//     SE(DQP_CHROMA);  // chroma_qp_index_offset        1
+//     U1(1);  // deblocking_filter_control_present_flag 1
+//     U1(0);  // constrained_intra_pred_flag            0
+//     U1(0);  // redundant_pic_cnt_present_flag         0
+// #else
+//     U(5, 0x1C);         // constant shortcut:
+// //     SE(0);  // pic_init_qs_minus26                    1
+// //     SE(0);  // chroma_qp_index_offset                 1
+// //     U1(1);  // deblocking_filter_control_present_flag 1
+// //     U1(0);  // constrained_intra_pred_flag            0
+// //     U1(0);  // redundant_pic_cnt_present_flag         0
+// #endif
+//     nal_end(enc);
+}
+
 static void encode_pps(h264e_enc_t *enc, int pps_id)
 {
     nal_start(enc, 0x68);
@@ -11455,7 +11508,7 @@ static int check_parameters_align(const H264E_create_param_t *opt, const H264E_i
 *   See header file for details.
 */
 int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run_param_t *opt,
-    H264E_io_yuv_t *in, unsigned char **coded_data, int *sizeof_coded_data)
+    H264E_io_yuv_t *in, unsigned char **coded_data, int *sizeof_coded_data, storage_t dec)
 {
     int i;
     int frame_type;
@@ -11596,7 +11649,8 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         } else
 #endif
         {
-            encode_sps(enc, 66);
+            // encode_sps(enc, 66);
+            encode_sps2(enc, dec);
             encode_pps(enc, 0);
         }
     } else

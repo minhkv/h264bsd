@@ -6,6 +6,7 @@
 #define MINIH264_IMPLEMENTATION
 //#define MINIH264_ONLY_SIMD
 #include "minih264e.h"
+#include "h264bsd_storage.h"
 
 #define DEFAULT_GOP 20
 #define DEFAULT_QP 20
@@ -348,7 +349,7 @@ static void gen_chessboard_rot(unsigned char *p, int w, int h, int frm)
     }
 }
 
-int encode(int width, int height, FILE *fin, FILE *fout)
+int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
 {
     int i, frames = 0;
     const char *fnin, *fnout;
@@ -491,7 +492,7 @@ int encode(int width, int height, FILE *fin, FILE *fout)
             }
             }
 #endif
-            error = H264E_encode(enc, scratch, &run_param, &yuv, &coded_data, &sizeof_coded_data);
+            error = H264E_encode(enc, scratch, &run_param, &yuv, &coded_data, &sizeof_coded_data, dec);
             assert(!error);
 
             if (i)
