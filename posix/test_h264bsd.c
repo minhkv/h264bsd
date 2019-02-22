@@ -169,6 +169,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
           savePic(pic, width, height, numPics);
         }
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
+        encode(width, height, outputFile, fout, dec);
         YUV_read_and_show(pic, width, height, numPics);
         break;
       case H264BSD_HDRS_RDY:
@@ -190,9 +191,9 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         exit(1);
     }
   }
-  fclose(outputFile);
-  outputFile = fopen(outputPath, "r");
-  encode(width, height, outputFile, fout, dec);
+  // fclose(outputFile);
+  // outputFile = fopen(outputPath, "r");
+  // encode(width, height, outputFile, fout, dec);
   fclose(fout);
 
   h264bsdShutdown(&dec);

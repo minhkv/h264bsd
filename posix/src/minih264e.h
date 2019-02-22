@@ -9035,7 +9035,7 @@ static void encode_pps(h264e_enc_t *enc, int pps_id)
 *   Encode Slice Header
 *   ref: [1] 7.3.3
 */
-static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_idx_use, int long_term_idx_update, int pps_id, int enc_type)
+static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_idx_use, int long_term_idx_update, int pps_id, int enc_type, storage_t dec)
 {
     // slice reset
     enc->slice.start_mb_num = enc->mb.num;
@@ -11262,10 +11262,10 @@ int H264E_init(h264e_enc_t *enc, const H264E_create_param_t *opt)
     return ret;
 }
 
-static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use, int long_term_idx_update, int pps_id, int enc_type)
+static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use, int long_term_idx_update, int pps_id, int enc_type, storage_t dec)
 {
     int i, k;
-    encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type);
+    encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type, dec);
     // encode frame
     do
     {   // encode row
@@ -11276,7 +11276,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
             {
                 // start new slice
                 nal_end(enc);
-                encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type);
+                encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type, dec);
             }
 
             mb_encode(enc, enc_type);
@@ -11321,18 +11321,19 @@ typedef struct
 {
     H264E_persist_t *enc;
     int frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type;
+    storage_t dec;
 } h264_enc_slice_thread_params_t;
 
 static void encode_slice_thread_simple(void *arg)
 {
     h264_enc_slice_thread_params_t *h = (h264_enc_slice_thread_params_t*)arg;
-    encode_slice(h->enc, h->frame_type, h->long_term_idx_use, h->long_term_idx_update, h->pps_id, h->enc_type);
+    encode_slice(h->enc, h->frame_type, h->long_term_idx_use, h->long_term_idx_update, h->pps_id, h->enc_type, h->dec);
 }
 #endif
 
 static int H264E_encode_one(H264E_persist_t *enc, const H264E_run_param_t *opt,
     int long_term_idx_use, int is_refers_to_long_term, int long_term_idx_update,
-    int frame_type, int pps_id, int enc_type)
+    int frame_type, int pps_id, int enc_type, storage_t dec)
 {
     int i, k;
     // slice reset
@@ -11354,7 +11355,7 @@ static int H264E_encode_one(H264E_persist_t *enc, const H264E_run_param_t *opt,
         enc->rc.vbv_bits - enc->run_param.desired_frame_bytes*8 > enc->param.vbv_size_bytes*8)
     {
         // encode transparent frame on VBV overflow
-        encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type);
+        encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type, dec);
         enc->mb.skip_run = enc->frame.nmb;
         UE(enc->mb.skip_run);
         nal_end(enc);
@@ -11411,6 +11412,7 @@ static int H264E_encode_one(H264E_persist_t *enc, const H264E_run_param_t *opt,
                     thread_par[i].long_term_idx_update = long_term_idx_update;
                     thread_par[i].pps_id = pps_id;
                     thread_par[i].enc_type = enc_type;
+                    thread_par[i].dec = dec;
                     args[i] = thread_par + i;
                 }
                 enc->param.run_func_in_thread(enc->param.token, encode_slice_thread_simple, args, enc->param.max_threads);
@@ -11429,7 +11431,7 @@ static int H264E_encode_one(H264E_persist_t *enc, const H264E_run_param_t *opt,
         } else
 #endif
         {
-            encode_slice(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type);
+            encode_slice(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type, dec);
         }
     }
 
@@ -11654,8 +11656,8 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         {
             // encode_sps(enc, 66);
             encode_sps2(enc, dec);
-            // encode_pps(enc, 0);
-            encode_pps2(enc, dec);
+            encode_pps(enc, 0);
+            // encode_pps2(enc, dec);
         }
     } else
     {
@@ -11693,7 +11695,7 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         enc_base->out_pos = 0;
 
         H264E_encode_one(enc_base, &enc_base->run_param, long_term_idx_use, is_refers_to_long_term, long_term_idx_update,
-            frame_type, enc->param.sps_id*4 + 0, 0);
+            frame_type, enc->param.sps_id*4 + 0, 0, dec);
 
         enc->out_pos += enc_base->out_pos;
 
@@ -11708,12 +11710,12 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
 
         memset(enc->df.df_nzflag, 0, enc->frame.nmbx);
         H264E_encode_one(enc, opt, long_term_idx_use, is_refers_to_long_term, long_term_idx_update,
-            frame_type, enc->param.sps_id*4 + 1, 20);
+            frame_type, enc->param.sps_id*4 + 1, 20, dec);
     } else
 #endif // H264E_SVC_API
     {
         H264E_encode_one(enc, opt, long_term_idx_use, is_refers_to_long_term, long_term_idx_update,
-            frame_type, enc->param.sps_id*4 + 0, 0);
+            frame_type, enc->param.sps_id*4 + 0, 0, dec);
     }
 
     *sizeof_coded_data = enc->out_pos;

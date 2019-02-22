@@ -396,7 +396,8 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
 #endif
 
     frame_size = width*height*3/2;
-    buf_in   = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
+    // buf_in   = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
+    buf_in = dec.currImage->data;
     // buf_save = (uint8_t*)ALIGNED_ALLOC(64, frame_size);
 
     // if (!buf_in || !buf_save)
@@ -429,7 +430,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
         scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
         error = H264E_init(enc, &create_param);
         
-        for (i = 0; cmdline->max_frames; i++)
+        // for (i = 0; cmdline->max_frames; i++)
         {
             // if (!fin)
             // {
@@ -440,7 +441,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
             //     if (!fread(buf_in, frame_size, 1, fin)) break;
             // if (cmdline->psnr)
             //     memcpy(buf_save, buf_in, frame_size);
-            if (!fread(buf_in, frame_size, 1, fin)) break;
+            // if (!fread(buf_in, frame_size, 1, fin)) break;
             yuv.yuv[0] = buf_in; yuv.stride[0] = width;
             yuv.yuv[1] = buf_in + width*height; yuv.stride[1] = width/2;
             yuv.yuv[2] = buf_in + width*height*5/4; yuv.stride[2] = width/2;
@@ -520,7 +521,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
 
         // if (cmdline->psnr)
             // psnr_print(psnr_get());
-        free(buf_in);
+        // free(buf_in);
         if (enc)
             free(enc);
         if (scratch)
