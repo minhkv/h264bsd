@@ -169,7 +169,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
           savePic(pic, width, height, numPics);
         }
         if (comparePath) totalErrors += comparePics(pic, width, height, numPics);
-        encode(width, height, outputFile, fout, dec);
+        encode(width, height, outputFile, fout, dec, numPics - 1);
         YUV_read_and_show(pic, width, height, numPics);
         break;
       case H264BSD_HDRS_RDY:

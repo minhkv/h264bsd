@@ -349,7 +349,7 @@ static void gen_chessboard_rot(unsigned char *p, int w, int h, int frm)
     }
 }
 
-int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
+int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numPics)
 {
     int i, frames = 0;
     const char *fnin, *fnout;
@@ -430,6 +430,8 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
         scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
         error = H264E_init(enc, &create_param);
         
+        // enc->frame.num = numPics;
+        frames = numPics;
         // for (i = 0; cmdline->max_frames; i++)
         {
             // if (!fin)
@@ -493,7 +495,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec)
             }
             }
 #endif
-            error = H264E_encode(enc, scratch, &run_param, &yuv, &coded_data, &sizeof_coded_data, dec);
+            error = H264E_encode(enc, scratch, &run_param, &yuv, &coded_data, &sizeof_coded_data, dec, numPics);
             assert(!error);
 
             if (i)

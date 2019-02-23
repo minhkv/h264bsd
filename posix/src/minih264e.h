@@ -296,7 +296,8 @@ int H264E_encode(
     H264E_io_yuv_t *frame,              ///< Input video frame
     unsigned char **coded_data,         ///< [OUT] Pointer to coded data
     int *sizeof_coded_data,              ///< [OUT] Size of coded data
-    storage_t dec
+    storage_t dec,
+    int numPics
 );
 
 /**
@@ -11514,7 +11515,7 @@ static int check_parameters_align(const H264E_create_param_t *opt, const H264E_i
 *   See header file for details.
 */
 int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run_param_t *opt,
-    H264E_io_yuv_t *in, unsigned char **coded_data, int *sizeof_coded_data, storage_t dec)
+    H264E_io_yuv_t *in, unsigned char **coded_data, int *sizeof_coded_data, storage_t dec, int numPics)
 {
     int i;
     int frame_type;
@@ -11585,6 +11586,7 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
     }
 
     // Set default frame type
+    enc->frame.num = numPics;
     frame_type = opt->frame_type;
     if (frame_type == H264E_FRAME_TYPE_DEFAULT)
     {
