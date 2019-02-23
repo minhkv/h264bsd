@@ -9038,6 +9038,7 @@ static void encode_pps(h264e_enc_t *enc, int pps_id)
 static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_idx_use, int long_term_idx_update, int pps_id, int enc_type, storage_t dec)
 {
     // slice reset
+    sliceHeader_t sliceHeader = dec.sliceHeader[0];
     enc->slice.start_mb_num = enc->mb.num;
     enc->mb.skip_run = 0;
     memset(enc->i4x4mode, -1, (enc->frame.nmbx + 1)*4);
@@ -9100,10 +9101,10 @@ static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_
     }
 #endif
 
-    UE(enc->slice.start_mb_num);        // first_mb_in_slice
+    UE(sliceHeader.firstMbInSlice);//UE(enc->slice.start_mb_num);        // first_mb_in_slice
     UE(enc->slice.type);                // slice_type
     //U(1+4, 16 + (enc->frame.num&15));   // pic_parameter_set_id | frame_num
-    UE(pps_id);                           // pic_parameter_set_id
+    UE(dec.activePpsId);// UE(pps_id);                           // pic_parameter_set_id
     U(4 + log2_max_frame_num_minus4, enc->frame.num & ((1 << (log2_max_frame_num_minus4 + 4)) - 1)); // frame_num U(4, enc->frame.num&15);            // frame_num
     if (frame_type == H264E_FRAME_TYPE_KEY)
     {
