@@ -17,7 +17,6 @@
 
 #include "src/h264bsd_decoder.h"
 #include "src/h264bsd_util.h"
-#include "yuv.h"
 #include "src/minih264e.h"
 #include "encoder.c"
 #include "src/showImage.h"
@@ -198,6 +197,13 @@ void init_encode(int width, int height)
   if (scratch == NULL)
     scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
   error = H264E_init(enc, &create_param);
+}
+
+void destroy_encode() {
+  if (enc)
+    free(enc);
+  if (scratch)
+    free(scratch);
 }
 
 int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numPics)
@@ -410,10 +416,7 @@ void decodeContent(u8 *contentBuffer, size_t contentSize)
   // outputFile = fopen(outputPath, "r");
   // encode(width, height, outputFile, fout, dec);
   fclose(fout);
-  if (enc)
-    free(enc);
-  if (scratch)
-    free(scratch);
+  destroy_encode();
   h264bsdShutdown(&dec);
 
   printf("Test file complete. %d pictures decoded.\n", numPics);
