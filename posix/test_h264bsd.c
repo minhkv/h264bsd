@@ -18,7 +18,7 @@
 #include "src/h264bsd_decoder.h"
 #include "src/h264bsd_util.h"
 #include "src/minih264e.h"
-#include "encoder.c"
+#include "src/minih264e.c"
 #include "src/showImage.h"
 #include "src/showImage.c"
 
