@@ -11664,6 +11664,13 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         }
     } else
     {
+        int pic_init_qp = 30;
+        pic_init_qp = MIN(pic_init_qp, enc->run_param.qp_max);
+        pic_init_qp = MAX(pic_init_qp, enc->run_param.qp_min);
+
+        //temp only two layers!
+        enc->sps.pic_init_qp = pic_init_qp;
+        
         if (!enc->sps.pic_init_qp)
         {
             return H264E_STATUS_BAD_FRAME_TYPE;
