@@ -28,3 +28,5 @@ posix/lib/
 posix/obj/
 test/*.yuv
 test/raw/
+**/*.yuv
+**/*.264
