@@ -32,6 +32,8 @@ int sizeof_coded_data, frame_size, width, height, _qp;
 #define ALIGNED_ALLOC(n, size) aligned_alloc(n, size)
 #endif
 
+#define H264E_MAX_THREADS 4
+
 #if H264E_MAX_THREADS
 #include "src/system.h"
 typedef struct
