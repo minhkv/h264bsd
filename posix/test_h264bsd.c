@@ -137,40 +137,51 @@ int comparePics(u8* actualData, int width, int height, int picNum) {
   return numErrors;
 }
 
-int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numPics)
-{
-    int i, frames = 0;
-    const char *fnin, *fnout;
-    uint8_t *buf_in;
+static H264E_persist_t *enc = NULL;
+static H264E_scratch_t *scratch = NULL;
 
-    if (!read_cmdline_options())
-        return 1;
-    fnin  = "out.yuv";
-    fnout = "out.264";
+void init_encode() {
+  read_cmdline_options();
 
-    if (!fnout)
-        fnout = "out.264";
-
-    create_param.enableNEON = 1;
+  create_param.enableNEON = 1;
 #if H264E_SVC_API
-    create_param.num_layers = 1;
-    create_param.inter_layer_pred_flag = 1;
-    create_param.inter_layer_pred_flag = 0;
+  create_param.num_layers = 1;
+  create_param.inter_layer_pred_flag = 1;
+  create_param.inter_layer_pred_flag = 0;
 #endif
-    create_param.gop = cmdline->gop;
-    create_param.height = height;
-    create_param.width  = width;
-    create_param.max_long_term_reference_frames = 0;
-#if ENABLE_TEMPORAL_SCALABILITY
-    create_param.max_long_term_reference_frames = MAX_LONG_TERM_FRAMES;
-#endif
-    create_param.fine_rate_control_flag = 0;
+  create_param.fine_rate_control_flag = 0;
     create_param.const_input_flag = cmdline->psnr ? 0 : 1;
     //create_param.vbv_overflow_empty_frame_flag = 1;
     //create_param.vbv_underflow_stuffing_flag = 1;
     create_param.vbv_size_bytes = 100000/8;
     create_param.temporal_denoise_flag = cmdline->denoise;
     //create_param.vbv_size_bytes = 1500000/8;
+
+}
+
+int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numPics)
+{
+    int i, frames = 0;
+    const char *fnin, *fnout;
+    uint8_t *buf_in;
+
+    
+    fnin  = "out.yuv";
+    fnout = "out.264";
+
+    if (!fnout)
+        fnout = "out.264";
+
+      create_param.gop = cmdline->gop;
+  create_param.height = height;
+  create_param.width = width;
+  create_param.max_long_term_reference_frames = 0;
+
+
+#if ENABLE_TEMPORAL_SCALABILITY
+    create_param.max_long_term_reference_frames = MAX_LONG_TERM_FRAMES;
+#endif
+    
 
 #if H264E_MAX_THREADS
     void *thread_pool = NULL;
@@ -194,8 +205,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
         int max_bytes = 0;
         int min_bytes = 10000000;
         int sizeof_persist = 0, sizeof_scratch = 0, error;
-        H264E_persist_t *enc = NULL;
-        H264E_scratch_t *scratch = NULL;
+
         if (cmdline->psnr)
             psnr_init();
 
@@ -206,8 +216,10 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
             return 0;
         }
         printf("sizeof_persist = %d sizeof_scratch = %d\n", sizeof_persist, sizeof_scratch);
-        enc     = (H264E_persist_t *)ALIGNED_ALLOC(64, sizeof_persist);
-        scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
+        if (enc == NULL)
+          enc     = (H264E_persist_t *)ALIGNED_ALLOC(64, sizeof_persist);
+        if (scratch == NULL)
+          scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
         error = H264E_init(enc, &create_param);
         
         // enc->frame.num = numPics;
@@ -295,10 +307,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
         // if (cmdline->psnr)
             // psnr_print(psnr_get());
         // free(buf_in);
-        if (enc)
-            free(enc);
-        if (scratch)
-            free(scratch);
+        
     }
 
 #if H264E_MAX_THREADS
@@ -320,6 +329,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
     fprintf(stderr, "h264bsdInit failed\n");
     exit(1);
   }
+  init_encode();
 
   u8* byteStrm = contentBuffer;
   u32 readBytes;
@@ -369,7 +379,10 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
   // outputFile = fopen(outputPath, "r");
   // encode(width, height, outputFile, fout, dec);
   fclose(fout);
-
+  if (enc)
+      free(enc);
+  if (scratch)
+      free(scratch);
   h264bsdShutdown(&dec);
 
   printf("Test file complete. %d pictures decoded.\n", numPics);
