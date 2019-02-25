@@ -139,8 +139,9 @@ int comparePics(u8* actualData, int width, int height, int picNum) {
 
 static H264E_persist_t *enc = NULL;
 static H264E_scratch_t *scratch = NULL;
+static int sizeof_persist = 0, sizeof_scratch = 0, error;
 
-void init_encode() {
+void init_encode(int width, int height) {
   read_cmdline_options();
 
   create_param.enableNEON = 1;
@@ -157,7 +158,27 @@ void init_encode() {
     create_param.temporal_denoise_flag = cmdline->denoise;
     //create_param.vbv_size_bytes = 1500000/8;
 
-}
+  create_param.gop = cmdline->gop;
+  create_param.height = height;
+  create_param.width = width;
+  create_param.max_long_term_reference_frames = 0;
+
+  // int sizeof_persist = 0, sizeof_scratch = 0, error;
+  error = H264E_sizeof(&create_param, &sizeof_persist, &sizeof_scratch);
+        if (error)
+        {
+            printf("H264E_init error = %d\n", error);
+            return 0;
+        }
+  printf("sizeof_persist = %d sizeof_scratch = %d\n", sizeof_persist, sizeof_scratch);
+
+  if (enc == NULL)
+          enc     = (H264E_persist_t *)ALIGNED_ALLOC(64, sizeof_persist);
+        if (scratch == NULL)
+          scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
+        error = H264E_init(enc, &create_param);
+        
+} 
 
 int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numPics)
 {
@@ -172,10 +193,7 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
     if (!fnout)
         fnout = "out.264";
 
-      create_param.gop = cmdline->gop;
-  create_param.height = height;
-  create_param.width = width;
-  create_param.max_long_term_reference_frames = 0;
+  
 
 
 #if ENABLE_TEMPORAL_SCALABILITY
@@ -204,23 +222,12 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
         int sum_bytes = 0;
         int max_bytes = 0;
         int min_bytes = 10000000;
-        int sizeof_persist = 0, sizeof_scratch = 0, error;
+        // int sizeof_persist = 0, sizeof_scratch = 0, error;
 
         if (cmdline->psnr)
             psnr_init();
 
-        error = H264E_sizeof(&create_param, &sizeof_persist, &sizeof_scratch);
-        if (error)
-        {
-            printf("H264E_init error = %d\n", error);
-            return 0;
-        }
-        printf("sizeof_persist = %d sizeof_scratch = %d\n", sizeof_persist, sizeof_scratch);
-        if (enc == NULL)
-          enc     = (H264E_persist_t *)ALIGNED_ALLOC(64, sizeof_persist);
-        if (scratch == NULL)
-          scratch = (H264E_scratch_t *)ALIGNED_ALLOC(64, sizeof_scratch);
-        error = H264E_init(enc, &create_param);
+        
         
         // enc->frame.num = numPics;
         frames = numPics;
@@ -329,7 +336,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
     fprintf(stderr, "h264bsdInit failed\n");
     exit(1);
   }
-  init_encode();
+  
 
   u8* byteStrm = contentBuffer;
   u32 readBytes;
@@ -361,6 +368,7 @@ void decodeContent (u8* contentBuffer, size_t contentSize) {
         // if (!croppingFlag) {
           width = h264bsdPicWidth(&dec) * 16;
           height = h264bsdPicHeight(&dec) * 16;
+          init_encode(width, height);
         // }
         char* cropped = croppingFlag ? "(cropped) " : "";
         printf("Decoded headers. Image size %s%dx%d.\n", cropped, width, height);
