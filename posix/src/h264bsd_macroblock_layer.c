@@ -984,6 +984,8 @@ u32 h264bsdDecodeMacroblock(mbStorage_t *pMb, macroblockLayer_t *pMbLayer,
 
     mbType = pMbLayer->mbType;
     pMb->mbType = mbType;
+    macroblockLayer_t mbLayer = *pMbLayer;
+    pMb->mbLayer = mbLayer;
 
     pMb->decoded++;
 

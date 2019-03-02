@@ -9233,7 +9233,7 @@ static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_
 /**
 *   Macroblock transform, quantization and bitstream encoding
 */
-static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode)
+static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, macroblockLayer_t *mb)
 {
     int i, uv, mb_type, cbpc, cbpl, cbp;
     scratch_t *qv = enc->scratch;
@@ -10579,7 +10579,7 @@ static void mb_deblock(deblock_filter_t *df, int mb_type, int qp_this, int mbx, 
 /**
 *   Macroblock encoding
 */
-static void mb_encode(h264e_enc_t *enc, int enc_type)
+static void mb_encode(h264e_enc_t *enc, int enc_type, mbStorage_t *mb)
 {
     pix_t *top = enc->top_line + 48 + enc->mb.x*32;
     pix_t *left = enc->top_line;
@@ -10648,7 +10648,7 @@ static void mb_encode(h264e_enc_t *enc, int enc_type)
 #if H264E_SVC_API
 _WRITE_MB:
 #endif
-    mb_write(enc, enc_type, base_mode);
+    mb_write(enc, enc_type, base_mode, mb);
 
     if (!enc->speed.disable_deblock)
     {
@@ -11268,6 +11268,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
 {
     int i, k;
     encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type, dec);
+    u32 currMbAddr = dec.sliceHeader->firstMbInSlice;
     // encode frame
     do
     {   // encode row
@@ -11281,7 +11282,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
                 encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id, enc_type, dec);
             }
 
-            mb_encode(enc, enc_type);
+            mb_encode(enc, enc_type, dec.mb + currMbAddr);
 
             enc->dec.yuv[0] += 16;
             enc->dec.yuv[1] += 8;
@@ -11292,6 +11293,10 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
             {
                 rc_mb_end(enc);
             }
+
+            currMbAddr = h264bsdNextMbAddress(dec.sliceGroupMap,
+                dec.picSizeInMbs, currMbAddr);
+
         } while (++enc->mb.x < enc->frame.nmbx);
 
         for (i = 0, k = 16; i < 3; i++, k = 8)
