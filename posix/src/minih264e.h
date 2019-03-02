@@ -9233,7 +9233,7 @@ static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_
 /**
 *   Macroblock transform, quantization and bitstream encoding
 */
-static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, macroblockLayer_t *mb)
+static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t *mb)
 {
     int i, uv, mb_type, cbpc, cbpl, cbp;
     scratch_t *qv = enc->scratch;
@@ -9420,7 +9420,7 @@ l_skip:
                 {
                     pred_mode_chroma ^= 2;
                 }
-                UE(pred_mode_chroma);
+                UE(mb->mbLayer.mbPred.intraChromaPredMode);
                 me_mv_medianpredictor_put(enc, 0, 0, 4, 4, point(MV_NA,0));
             } else
             {
