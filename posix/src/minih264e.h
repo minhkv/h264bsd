@@ -361,9 +361,9 @@ void H264E_set_vbv_state(
 #endif
 #endif
 
-#ifndef MINIH264_ONLY_SIMD
+// #ifndef MINIH264_ONLY_SIMD
 #define H264E_ENABLE_PLAIN_C 1
-#endif
+// #endif
 
 #define H264E_CONFIGS_COUNT ((H264E_ENABLE_SSE2) + (H264E_ENABLE_PLAIN_C) + (H264E_ENABLE_NEON))
 
@@ -6984,6 +6984,58 @@ static void FwdTransformResidual4x42(const uint8_t *inp, const uint8_t *pred,
 #endif
 }
 
+static void FwdTransformResidual4x42_2(const uint8_t *inp, const uint8_t *pred,
+    uint32_t inp_stride, int16_t *out, pix_t *residual)
+{
+    int i;
+    int16_t tmp[16];
+    pix_t* inp2 = residual;
+#if TRANSPOSE_BLOCK
+    // Transform columns
+    for (i = 0; i < 4; i++, pred++, inp++)
+    {
+        int f0 = inp2[0];//inp[0] - pred[0];
+        int f1 = inp2[1*inp_stride];//inp[1*inp_stride] - pred[1*16];
+        int f2 = inp2[2*inp_stride];//inp[2*inp_stride] - pred[2*16];
+        int f3 = inp2[3*inp_stride];//inp[3*inp_stride] - pred[3*16];
+        TRANSFORM(f0, f1, f2, f3, tmp + i*4, 1);
+    }
+    // Transform rows
+    for (i = 0; i < 4; i++)
+    {
+        int d0 = tmp[i + 0];
+        int d1 = tmp[i + 4];
+        int d2 = tmp[i + 8];
+        int d3 = tmp[i + 12];
+        TRANSFORM(d0, d1, d2, d3, out + i, 4);
+    }
+
+#else
+    /* Transform rows */
+    for (i = 0; i < 16; i += 4)
+    {
+        int d0 = inp2[0]; //inp[0] - pred[0];
+        int d1 = inp2[1];//inp[1] - pred[1];
+        int d2 = int2[2];//inp[2] - pred[2];
+        int d3 = inp2[3];//inp[3] - pred[3];
+        TRANSFORM(d0, d1, d2, d3, tmp + i, 1);
+        pred += 16;
+        inp += inp_stride;
+        inp2 += inp_stride;
+    }
+
+    /* Transform columns */
+    for (i = 0; i < 4; i++)
+    {
+        int f0 = tmp[i + 0];
+        int f1 = tmp[i + 4];
+        int f2 = tmp[i + 8];
+        int f3 = tmp[i + 12];
+        TRANSFORM(f0, f1, f2, f3, out + i, 4);
+    }
+#endif
+}
+
 static void TransformResidual4x4(int16_t *pSrc)
 {
     int i;
@@ -7171,6 +7223,45 @@ static int h264e_transform_sub_quant_dequant(const pix_t *inp, const pix_t *pred
 {
     int zmask;
     transform(inp, pred, inp_stride, mode, q);
+    if (mode & 1) // QDQ_MODE_INTRA_16 || QDQ_MODE_CHROMA
+    {
+        int cloop = (mode >> 1)*(mode >> 1);
+        short *dc = ((short *)q) - 16;
+        quant_t *pq = q;
+        do
+        {
+            *dc++ = pq->dq[0];
+            pq++;
+        } while (--cloop);
+    }
+    zmask = zero_smallq(q, mode, qdat);
+    return quantize(q, mode, qdat, zmask);
+}
+
+static void transform2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q, pix_t* residual)
+{
+    int crow = mode >> 1;
+    int ccol = crow;
+
+    do
+    {
+        do
+        {
+            FwdTransformResidual4x42_2(inp, pred, inp_stride, q->dq, residual);
+            q++;
+            inp += 4;
+            pred += 4;
+        } while (--ccol);
+        ccol = mode >> 1;
+        inp += 4*(inp_stride - ccol);
+        pred += 4*(16 - ccol);
+    } while (--crow);
+}
+
+static int h264e_transform_sub_quant_dequant2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q, const uint16_t *qdat, pix_t* residual)
+{
+    int zmask;
+    transform2(inp, pred, inp_stride, mode, q, residual);
     if (mode & 1) // QDQ_MODE_INTRA_16 || QDQ_MODE_CHROMA
     {
         int cloop = (mode >> 1)*(mode >> 1);
@@ -9103,13 +9194,17 @@ static void encode_slice_header(h264e_enc_t *enc, int frame_type, int long_term_
 #endif
 
     UE(sliceHeader.firstMbInSlice);//UE(enc->slice.start_mb_num);        // first_mb_in_slice
+    enc->slice.type = sliceHeader.sliceType;
+    if (enc->slice.type > 2) {
+        enc->slice.type -= 5;
+    }
     UE(enc->slice.type);                // slice_type
     //U(1+4, 16 + (enc->frame.num&15));   // pic_parameter_set_id | frame_num
-    UE(dec.activePpsId);// UE(pps_id);                           // pic_parameter_set_id
+    UE(sliceHeader.picParameterSetId);// UE(pps_id);                           // pic_parameter_set_id
     U(4 + log2_max_frame_num_minus4, enc->frame.num & ((1 << (log2_max_frame_num_minus4 + 4)) - 1)); // frame_num U(4, enc->frame.num&15);            // frame_num
     if (frame_type == H264E_FRAME_TYPE_KEY)
     {
-        UE(enc->next_idr_pic_id);       // idr_pic_id
+        UE(sliceHeader.idrPicId);// UE(enc->next_idr_pic_id);       // idr_pic_id
     }
     //!!!  if !quality_id && enc->slice.type == SLICE_TYPE_P  put_bit(s, 0); // num_ref_idx_active_override_flag = 0
     if(!quality_id)
@@ -9281,7 +9376,13 @@ l_skip:
         if (enc->mb.type != 5)
         {
             unsigned nz_mask;
-            nz_mask = h264e_transform_sub_quant_dequant(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
+            pix_t luma[256];
+            for (int i = 0; i < 16; i++) {
+                for (int j = 0; j < 16; j++) {
+                    luma[i * 16 + j] = mb->mbLayer.residual.level[i][j];
+                }
+            }
+            nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0], luma);
             enc->scratch->nz_mask = (uint16_t)nz_mask;
             if (intra16x16_flag)
             {
@@ -9404,23 +9505,40 @@ l_skip:
                 int pred_mode_chroma;
                 if (enc->mb.type == 5)  // intra 4x4
                 {
+                    // printf("i4x4 mode: ");
                     for (i = 0; i < 16; i++)
                     {
-                        int m = enc->mb.i4x4_mode[decode_block_scan[i]];
+                        int m = enc->mb.i4x4_mode[decode_block_scan[i]];    
                         int nbits =  4;
                         if (m < 0)
                         {
                             m = nbits = 1;
                         }
+                        // printf("%d", m);
                         U(nbits, m);
                     }
+                    // printf("\n");
+                    // printf("\tprev i4x4 mode flag: ");
+                    // for (i = 0; i < 16; i++) 
+                    // {
+                    //     printf("%d", mb->mbLayer.mbPred.prevIntra4x4PredModeFlag[decode_block_scan[i]]);
+                    // }
+                    // printf("\n");
+
+                    // printf("\trem i4x4 mode: ");
+                    // for (i = 0; i < 16; i++) 
+                    // {
+                    //     printf("%d", mb->mbLayer.mbPred.remIntra4x4PredMode[decode_block_scan[i]]);
+                    // }
+                    // printf("\n");
                 }
                 pred_mode_chroma = enc->mb.i16.pred_mode_luma;
                 if (!(pred_mode_chroma&1))
                 {
                     pred_mode_chroma ^= 2;
                 }
-                UE(mb->mbLayer.mbPred.intraChromaPredMode);
+                UE(pred_mode_chroma);
+                // UE(mb->mbLayer.mbPred.intraChromaPredMode);
                 me_mv_medianpredictor_put(enc, 0, 0, 4, 4, point(MV_NA,0));
             } else
             {
@@ -9446,6 +9564,7 @@ l_skip:
             }
         }
         cbp = cbpl + (cbpc << 4);
+        // cbp = mb->mbLayer.codedBlockPattern;
         /*temp for test up-sample filter*/
         /*if(base_mode)
         {
@@ -9468,6 +9587,7 @@ l_skip:
         if (cbp || (mb_type_svc >= 6))
         {
             SE(enc->rc.qp - enc->rc.prev_qp);
+            // SE(mb->mbLayer.mbQpDelta);
             enc->rc.prev_qp = enc->rc.qp;
         }
 
@@ -9578,7 +9698,7 @@ l_skip:
 /**
 *   Estimate cost of 4x4 intra predictor
 */
-static void intra_choose_4x4(h264e_enc_t *enc)
+static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
 {
     int i, n, a, nz_mask = 0, avail = mb_avail_flag(enc);
     scratch_t *qv = enc->scratch;
@@ -9731,7 +9851,7 @@ static int intra_estimate_16x16(pix_t *p, int s, int avail, int qp)
 *   13063
 *
 */
-static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int avail)
+static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int avail, macroblockLayer_t mbLayer)
 {
     int sad, sad4[4];
     // heuristic mode decision
@@ -10624,10 +10744,10 @@ static void mb_encode(h264e_enc_t *enc, int enc_type, mbStorage_t *mb)
 
     if (enc->mb.type >= 0)
     {
-        intra_choose_16x16(enc, left, top, avail);
+        intra_choose_16x16(enc, left, top, avail, mb->mbLayer);
         if (enc->run_param.encode_speed < 2 || enc->slice.type != SLICE_TYPE_P) // enable intra4x4 on P slices
         {
-            intra_choose_4x4(enc);
+            intra_choose_4x4(enc, mb->mbLayer);
         }
     }
 
