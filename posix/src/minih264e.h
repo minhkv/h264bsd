@@ -6216,7 +6216,14 @@ static uint32_t intra_predict_dc(const pix_t *left, const pix_t *top, int log_si
 #define L1 edge[-3]
 #define L2 edge[-4]
 #define L3 edge[-5]
-
+/*
+    Input: 
+        left:
+        top:
+        mode:
+    Output:
+        predict:
+*/
 static void h264e_intra_predict_16x16(pix_t *predict,  const pix_t *left, const pix_t *top, int mode)
 {
     int cloop = 16;
@@ -6983,21 +6990,42 @@ static void FwdTransformResidual4x42(const uint8_t *inp, const uint8_t *pred,
     }
 #endif
 }
+/*
 
-static void FwdTransformResidual4x42_2(const uint8_t *inp, const uint8_t *pred,
-    uint32_t inp_stride, int16_t *out, pix_t *residual)
+*/
+static void h264e_quant_luma_dc2(quant_t *q, int16_t *deq, const uint16_t *qdat)
+{
+    int16_t *tmp = ((int16_t*)q) - 16;
+    hadamar4_2d(tmp);
+    quant_dc(tmp, deq, qdat[0], 16, 0x20000);//0x15555);
+    hadamar4_2d(tmp);
+    assert(!(qdat[1] & 3));
+    // dirty trick here: shift w/o rounding, since it have no effect  for qp >= 10 (or, to be precise, for qp => 9)
+    dequant_dc(q, tmp, qdat[1] >> 2, 16);
+}
+
+/*
+    Input: 
+        inp: input macroblock
+        pred: prediction macroblock
+        inp_stride: 4x4 macroblock stride = 4
+    Output:
+        out: transformed and quantized coefficients of residual
+*/
+static void  FwdTransformResidual4x42_2(const uint8_t *inp, const uint8_t *pred,
+    uint32_t inp_stride, int16_t *out)
 {
     int i;
     int16_t tmp[16];
-    pix_t* inp2 = residual;
+    // uint8_t* inp2 = residual;
 #if TRANSPOSE_BLOCK
     // Transform columns
     for (i = 0; i < 4; i++, pred++, inp++)
     {
-        int f0 = inp2[0];//inp[0] - pred[0];
-        int f1 = inp2[1*inp_stride];//inp[1*inp_stride] - pred[1*16];
-        int f2 = inp2[2*inp_stride];//inp[2*inp_stride] - pred[2*16];
-        int f3 = inp2[3*inp_stride];//inp[3*inp_stride] - pred[3*16];
+        int f0 = inp[0] - pred[0];
+        int f1 = inp[1*inp_stride] - pred[1*16];
+        int f2 = inp[2*inp_stride] - pred[2*16];
+        int f3 = inp[3*inp_stride] - pred[3*16];
         TRANSFORM(f0, f1, f2, f3, tmp + i*4, 1);
     }
     // Transform rows
@@ -7014,14 +7042,13 @@ static void FwdTransformResidual4x42_2(const uint8_t *inp, const uint8_t *pred,
     /* Transform rows */
     for (i = 0; i < 16; i += 4)
     {
-        int d0 = inp2[0]; //inp[0] - pred[0];
-        int d1 = inp2[1];//inp[1] - pred[1];
-        int d2 = int2[2];//inp[2] - pred[2];
-        int d3 = inp2[3];//inp[3] - pred[3];
+        int d0 = inp[0] - pred[0];
+        int d1 = inp[1] - pred[1];
+        int d2 = inp[2] - pred[2];
+        int d3 = inp[3] - pred[3];
         TRANSFORM(d0, d1, d2, d3, tmp + i, 1);
         pred += 16;
         inp += inp_stride;
-        inp2 += inp_stride;
     }
 
     /* Transform columns */
@@ -7238,44 +7265,6 @@ static int h264e_transform_sub_quant_dequant(const pix_t *inp, const pix_t *pred
     return quantize(q, mode, qdat, zmask);
 }
 
-static void transform2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q, pix_t* residual)
-{
-    int crow = mode >> 1;
-    int ccol = crow;
-
-    do
-    {
-        do
-        {
-            FwdTransformResidual4x42_2(inp, pred, inp_stride, q->dq, residual);
-            q++;
-            inp += 4;
-            pred += 4;
-        } while (--ccol);
-        ccol = mode >> 1;
-        inp += 4*(inp_stride - ccol);
-        pred += 4*(16 - ccol);
-    } while (--crow);
-}
-
-static int h264e_transform_sub_quant_dequant2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q, const uint16_t *qdat, pix_t* residual)
-{
-    int zmask;
-    transform2(inp, pred, inp_stride, mode, q, residual);
-    if (mode & 1) // QDQ_MODE_INTRA_16 || QDQ_MODE_CHROMA
-    {
-        int cloop = (mode >> 1)*(mode >> 1);
-        short *dc = ((short *)q) - 16;
-        quant_t *pq = q;
-        do
-        {
-            *dc++ = pq->dq[0];
-            pq++;
-        } while (--cloop);
-    }
-    zmask = zero_smallq(q, mode, qdat);
-    return quantize(q, mode, qdat, zmask);
-}
 
 static void h264e_transform_add(pix_t *out, int out_stride, const pix_t *pred, quant_t *q, int side, int32_t mask)
 {
@@ -7321,6 +7310,112 @@ static void h264e_transform_add(pix_t *out, int out_stride, const pix_t *pred, q
         pred += 4*(16 - ccol);
     } while (--crow);
 }
+
+
+static void transform2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q)
+{
+    int crow = mode >> 1;
+    int ccol = crow;
+
+    do
+    {
+        do
+        {
+            FwdTransformResidual4x42_2(inp, pred, inp_stride, q->dq);
+            q++;
+            inp += 4;
+            pred += 4;
+        } while (--ccol);
+        ccol = mode >> 1;
+        inp += 4*(inp_stride - ccol);
+        pred += 4*(16 - ccol);
+    } while (--crow);
+}
+
+/*
+    Input: 
+        inp: input macroblock
+        pred: prediction macroblock
+        mode: 
+    Output: 
+        q->qv:
+        q->dq:
+        qdat:
+*/
+
+static int h264e_transform_sub_quant_dequant2(const pix_t *inp, const pix_t *pred, int inp_stride, int mode, quant_t *q, const uint16_t *qdat)
+{
+    int zmask;
+    transform2(inp, pred, inp_stride, mode, q);
+    if (mode & 1) // QDQ_MODE_INTRA_16 || QDQ_MODE_CHROMA
+    {
+        int cloop = (mode >> 1)*(mode >> 1);
+        short *dc = ((short *)q) - 16;
+        quant_t *pq = q;
+        do
+        {
+            *dc++ = pq->dq[0];
+            pq++;
+        } while (--cloop);
+    }
+    zmask = zero_smallq(q, mode, qdat);
+    return quantize(q, mode, qdat, zmask);
+}
+/*
+    Reconstruct input macroblock from pred and residual
+    Input: 
+        q:
+        pred:
+        mask:
+    Output:
+        out:
+*/
+static void h264e_transform_add2(pix_t *out, int out_stride, const pix_t *pred, quant_t *q, int side, int32_t mask)
+{
+    int crow = side;
+    int ccol = crow;
+
+    assert(IS_ALIGNED(out, 4));
+    assert(IS_ALIGNED(pred, 4));
+    assert(!(out_stride % 4));
+
+    do
+    {
+        do
+        {
+            if (mask >= 0)
+            {
+                // copy 4x4
+                pix_t *dst = out;
+                *(uint32_t*)dst = *(uint32_t*)(pred + 0 * 16); dst += out_stride;
+                *(uint32_t*)dst = *(uint32_t*)(pred + 1 * 16); dst += out_stride;
+                *(uint32_t*)dst = *(uint32_t*)(pred + 2 * 16); dst += out_stride;
+                *(uint32_t*)dst = *(uint32_t*)(pred + 3 * 16);
+            } else
+            {
+                int i, j;
+                TransformResidual4x4(q->dq);
+                for (j = 0; j < 4; j++)
+                {
+                    for (i = 0; i < 4; i++)
+                    {
+                        int Value = q->dq[j * 4 + i] + pred[j * 16 + i];
+                        out[j * out_stride + i] = (pix_t)clip_byte(Value);
+                    }
+                }
+            }
+            mask = (uint32_t)mask << 1;
+            q++;
+            out += 4;
+            pred += 4;
+        } while (--ccol);
+        ccol = side;
+        out += 4*(out_stride - ccol);
+        pred += 4*(16 - ccol);
+    } while (--crow);
+}
+
+
 #endif /* H264E_ENABLE_PLAIN_C */
 
 #if H264E_ENABLE_PLAIN_C || (H264E_ENABLE_NEON && !defined(MINIH264_ASM))
@@ -9352,13 +9447,15 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
         nz[3 - i] = nnz_left[i];
         nnz_left[i] = 0;
     }
-
+    if (mb->mbLayer.mbType == P_Skip) {
+        enc->mb.type = -1;
+    }
 l_skip:
     if (enc->mb.type == -1)
     {
         // encode skip macroblock
         assert(enc->slice.type != SLICE_TYPE_I);
-
+        printf("%2d", enc->mb.type + 1);
         // Increment run count
         enc->mb.skip_run++;
 
@@ -9376,20 +9473,15 @@ l_skip:
         if (enc->mb.type != 5)
         {
             unsigned nz_mask;
-            pix_t luma[256];
-            for (int i = 0; i < 16; i++) {
-                for (int j = 0; j < 16; j++) {
-                    luma[i * 16 + j] = mb->mbLayer.residual.level[i][j];
-                }
-            }
-            nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0], luma);
+
+            nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
             enc->scratch->nz_mask = (uint16_t)nz_mask;
             if (intra16x16_flag)
             {
-                h264e_quant_luma_dc(qv->qy, qv->quant_dc, enc->rc.qdat[0]);
+                h264e_quant_luma_dc2(qv->qy, qv->quant_dc, enc->rc.qdat[0]);
                 nz_mask = 0xFFFF;
             }
-            h264e_transform_add(enc->dec.yuv[0], enc->dec.stride[0], enc->pbest, qv->qy, 4, nz_mask << 16);
+            h264e_transform_add2(enc->dec.yuv[0], enc->dec.stride[0], enc->pbest, qv->qy, 4, nz_mask << 16);
         }
 
         // Coded Block Pattern for luma
@@ -9456,7 +9548,7 @@ l_skip:
             enc->mb.type = -1;
             goto l_skip;
         }
-
+        printf("%2d", enc->mb.type + 1);
         mb_type = enc->mb.type;
         if (mb_type_svc >= 6)   // intra 16x16
         {
@@ -9505,7 +9597,6 @@ l_skip:
                 int pred_mode_chroma;
                 if (enc->mb.type == 5)  // intra 4x4
                 {
-                    // printf("i4x4 mode: ");
                     for (i = 0; i < 16; i++)
                     {
                         int m = enc->mb.i4x4_mode[decode_block_scan[i]];    
@@ -9514,23 +9605,9 @@ l_skip:
                         {
                             m = nbits = 1;
                         }
-                        // printf("%d", m);
                         U(nbits, m);
                     }
-                    // printf("\n");
-                    // printf("\tprev i4x4 mode flag: ");
-                    // for (i = 0; i < 16; i++) 
-                    // {
-                    //     printf("%d", mb->mbLayer.mbPred.prevIntra4x4PredModeFlag[decode_block_scan[i]]);
-                    // }
-                    // printf("\n");
 
-                    // printf("\trem i4x4 mode: ");
-                    // for (i = 0; i < 16; i++) 
-                    // {
-                    //     printf("%d", mb->mbLayer.mbPred.remIntra4x4PredMode[decode_block_scan[i]]);
-                    // }
-                    // printf("\n");
                 }
                 pred_mode_chroma = enc->mb.i16.pred_mode_luma;
                 if (!(pred_mode_chroma&1))
@@ -9538,7 +9615,6 @@ l_skip:
                     pred_mode_chroma ^= 2;
                 }
                 UE(pred_mode_chroma);
-                // UE(mb->mbLayer.mbPred.intraChromaPredMode);
                 me_mv_medianpredictor_put(enc, 0, 0, 4, 4, point(MV_NA,0));
             } else
             {
@@ -9812,6 +9888,13 @@ static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
 
 /**
 *   Choose 16x16 prediction mode, most suitable for given gradient
+    Input:
+        p: input macroblock
+        s: stride (=16)
+        avail: 
+        qp:
+    Output:
+        Intra 16x16 prediction mode
 */
 static int intra_estimate_16x16(pix_t *p, int s, int avail, int qp)
 {
@@ -9850,6 +9933,15 @@ static int intra_estimate_16x16(pix_t *p, int s, int avail, int qp)
 *heuristic
 *   13063
 *
+    Input:
+        top:
+        left:
+        avail:
+        enc->scratch->mb_pix_inp
+    Output:
+        enc->mb.i16.pred_mode_luma
+        enc->pbest
+        enc->ptest
 */
 static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int avail, macroblockLayer_t mbLayer)
 {
@@ -11418,7 +11510,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
                 dec.picSizeInMbs, currMbAddr);
 
         } while (++enc->mb.x < enc->frame.nmbx);
-
+        printf("\n");
         for (i = 0, k = 16; i < 3; i++, k = 8)
         {
             enc->dec.yuv[i] += k*(enc->dec.stride[i] - enc->frame.nmbx);

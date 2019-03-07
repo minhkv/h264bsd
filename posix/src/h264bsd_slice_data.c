@@ -181,7 +181,9 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
-
+        int mbType = mbLayer->mbType;
+        printf("%2d", mbType);
+        if (mbCount % pStorage->activeSps->picWidthInMbs == pStorage->activeSps->picWidthInMbs - 1) printf("\n");
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
             currImage, pStorage->dpb, &qpY, currMbAddr,
             pStorage->activePps->constrainedIntraPredFlag, data);
