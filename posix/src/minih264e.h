@@ -9458,7 +9458,7 @@ l_skip:
     {
         // encode skip macroblock
         assert(enc->slice.type != SLICE_TYPE_I);
-        printf("%2d", enc->mb.type + 1);
+        // printf("%2d", enc->mb.type + 1);
         // Increment run count
         enc->mb.skip_run++;
 
@@ -9551,7 +9551,13 @@ l_skip:
             enc->mb.type = -1;
             goto l_skip;
         }
-        printf("%2d", enc->mb.type + 1);
+        if (enc->slice.type == SLICE_TYPE_I) {
+            printf("%2d", enc->mb.i16.pred_mode_luma);
+            if (enc->mb.x == enc->frame.nmbx - 1) {
+                printf("\n");
+            }
+        }
+        
         mb_type = enc->mb.type;
         if (mb_type_svc >= 6)   // intra 16x16
         {
@@ -11513,7 +11519,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
                 dec.picSizeInMbs, currMbAddr);
 
         } while (++enc->mb.x < enc->frame.nmbx);
-        printf("\n");
+        
         for (i = 0, k = 16; i < 3; i++, k = 8)
         {
             enc->dec.yuv[i] += k*(enc->dec.stride[i] - enc->frame.nmbx);
