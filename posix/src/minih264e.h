@@ -9450,8 +9450,9 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
     if (mb->mbLayer.mbType == P_Skip) {
         enc->mb.type = -1;
     }
-    if (enc->slice.type == SLICE_TYPE_I) {
-        // enc->mb.type = mb->mbLayer.mbType - 1;
+    if (enc->slice.type == SLICE_TYPE_I && mb->mbLayer.mbType >= 7) {
+        enc->mb.type = 6;
+        // if (enc->mb.type >= 6) enc->mb.type = 6;
     }
 l_skip:
     if (enc->mb.type == -1)
@@ -9583,9 +9584,9 @@ l_skip:
             UE(mb_type);
 
         if (enc->slice.type == SLICE_TYPE_I) {
-            // printf("%2d,%2d ", mb_type, mb->mbLayer.mbType - 6);
+            printf("%2d,%2d ", mb_type, mb->mbLayer.mbType - 6);
             // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
-            printf("%2d", enc->mb.i16.pred_mode_luma);
+            // printf("%2d", enc->mb.type);
             if (enc->mb.x == enc->frame.nmbx - 1) {
                 printf("\n");
             }
