@@ -9552,7 +9552,7 @@ l_skip:
             goto l_skip;
         }
         if (enc->slice.type == SLICE_TYPE_I) {
-            printf("%2d", enc->mb.i16.pred_mode_luma);
+            printf("%2d", enc->mb.type);
             if (enc->mb.x == enc->frame.nmbx - 1) {
                 printf("\n");
             }
