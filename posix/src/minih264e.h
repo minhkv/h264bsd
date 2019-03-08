@@ -9451,14 +9451,14 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
         enc->mb.type = -1;
     }
     if (enc->slice.type == SLICE_TYPE_I) {
-        enc->mb.type = mb->mbLayer.mbType - 1;
+        // enc->mb.type = mb->mbLayer.mbType - 1;
     }
 l_skip:
     if (enc->mb.type == -1)
     {
         // encode skip macroblock
         assert(enc->slice.type != SLICE_TYPE_I);
-        // printf("%2d", enc->mb.type + 1);
+
         // Increment run count
         enc->mb.skip_run++;
 
@@ -9551,12 +9551,7 @@ l_skip:
             enc->mb.type = -1;
             goto l_skip;
         }
-        if (enc->slice.type == SLICE_TYPE_I) {
-            printf("%2d", enc->mb.type);
-            if (enc->mb.x == enc->frame.nmbx - 1) {
-                printf("\n");
-            }
-        }
+        
         
         mb_type = enc->mb.type;
         if (mb_type_svc >= 6)   // intra 16x16
@@ -9586,6 +9581,15 @@ l_skip:
 
         if (!base_mode)
             UE(mb_type);
+
+        if (enc->slice.type == SLICE_TYPE_I) {
+            // printf("%2d,%2d ", mb_type, mb->mbLayer.mbType - 6);
+            // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
+            printf("%2d", enc->mb.i16.pred_mode_luma);
+            if (enc->mb.x == enc->frame.nmbx - 1) {
+                printf("\n");
+            }
+        }
 
         if (enc->mb.type == 3) // 8x8
         {
@@ -9957,7 +9961,10 @@ static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int av
     int sad, sad4[4];
     // heuristic mode decision
     enc->mb.i16.pred_mode_luma = intra_estimate_16x16(enc->scratch->mb_pix_inp, 16, avail, enc->rc.qp);
-
+    enc->mb.i16.pred_mode_luma = mbLayer.mbPred.intraChromaPredMode;
+    if(enc->mb.i16.pred_mode_luma == 3) enc->mb.i16.pred_mode_luma = 0;
+    if(enc->mb.i16.pred_mode_luma == 2) enc->mb.i16.pred_mode_luma = 0;
+    if(enc->mb.i16.pred_mode_luma == 0) enc->mb.i16.pred_mode_luma = 2;
     // run chosen predictor
     h264e_intra_predict_16x16(enc->ptest, left, top, enc->mb.i16.pred_mode_luma);
 
@@ -10846,7 +10853,7 @@ static void mb_encode(h264e_enc_t *enc, int enc_type, mbStorage_t *mb)
     if (enc->mb.type >= 0)
     {
         intra_choose_16x16(enc, left, top, avail, mb->mbLayer);
-        if (enc->run_param.encode_speed < 2 || enc->slice.type != SLICE_TYPE_P) // enable intra4x4 on P slices
+        if (mb->mbLayer.mbType == I_4x4 && (enc->run_param.encode_speed < 2 || enc->slice.type != SLICE_TYPE_P)) // enable intra4x4 on P slices
         {
             intra_choose_4x4(enc, mb->mbLayer);
         }

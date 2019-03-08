@@ -178,10 +178,10 @@ typedef struct mbStorage
     u8* refAddr[4];
     mv_t mv[16];
     u32 decoded;
-    struct mbStorage *mbA;
-    struct mbStorage *mbB;
+    struct mbStorage *mbA; // left mb
+    struct mbStorage *mbB; // top mb
     struct mbStorage *mbC;
-    struct mbStorage *mbD;
+    struct mbStorage *mbD; // top-left mb
     macroblockLayer_t mbLayer;
 } mbStorage_t;
 
