@@ -6522,7 +6522,7 @@ static int h264e_intra_choose_4x4(const pix_t *blockin, pix_t *blockpred, int av
 static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int avail, const pix_t *edge, int mpred, int penalty, int mode_decode)
 {
     int sad, best_sad, best_m = 2;
-
+    best_m = mode_decode;
     uint32_t r0, r1, r2, r3;
     uint32_t x0, x1, x2, x3, x;
 
@@ -6540,11 +6540,6 @@ static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int 
             best_sad += penalty;
         }
     }
-    ((uint32_t *)blockpred)[ 0] = x0;
-    ((uint32_t *)blockpred)[ 4] = x1;
-    ((uint32_t *)blockpred)[ 8] = x2;
-    ((uint32_t *)blockpred)[12] = x3;
-
 
     if (avail & AVAIL_T)
     {
@@ -9968,7 +9963,7 @@ l_skip:
 /**
 *   Estimate cost of 4x4 intra predictor
 */
-static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
+static void intra_choose_4x4(h264e_enc_t *enc, mbStorage_t *mb)
 {
     int i, n, a, nz_mask = 0, avail = mb_avail_flag(enc);
     scratch_t *qv = enc->scratch;
@@ -10033,8 +10028,8 @@ static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
             mpred = 2;
         }
 
-        // sad = h264e_intra_choose_4x4_2(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]), mbLayer.mbPred.remIntra4x4PredMode[n]);
-        sad = h264e_intra_choose_4x4(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]));
+        sad = h264e_intra_choose_4x4_2(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]), mb->intra4x4PredMode[decode_block_scan[n]]);
+        // sad = h264e_intra_choose_4x4(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]));
         mode = sad & 15;
         sad >>= 4;
         *ctx_l = *ctx_t = (int8_t)mode;
@@ -10072,7 +10067,7 @@ static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
     }
     enc->scratch->nz_mask = (uint16_t)nz_mask;
 
-    if (cost < enc->mb.cost || mbLayer.mbType == I_4x4)
+    if (cost < enc->mb.cost || mb->mbLayer.mbType == I_4x4)
     {
         enc->mb.cost = cost;
         enc->mb.type = 5;   // intra 4x4
@@ -11036,7 +11031,7 @@ static void mb_encode(h264e_enc_t *enc, int enc_type, mbStorage_t *mb)
         intra_choose_16x16(enc, left, top, avail, mb->mbLayer);
         if (mb->mbLayer.mbType == I_4x4 && (enc->run_param.encode_speed < 2 || enc->slice.type != SLICE_TYPE_P)) // enable intra4x4 on P slices
         {
-            intra_choose_4x4(enc, mb->mbLayer);
+            intra_choose_4x4(enc, mb);
         }
     }
 
