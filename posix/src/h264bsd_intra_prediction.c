@@ -527,7 +527,7 @@ u32 h264bsdIntraPrediction(mbStorage_t *pMb, macroblockLayer_t *mbLayer,
         return HANTRO_OK;
 
     h264bsdWriteMacroblock(image, data);
-
+    // pMb->data = data;
     return(HANTRO_OK);
 
 }

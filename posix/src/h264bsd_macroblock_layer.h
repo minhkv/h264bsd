@@ -183,6 +183,7 @@ typedef struct mbStorage
     struct mbStorage *mbC;
     struct mbStorage *mbD; // top-left mb
     macroblockLayer_t mbLayer;
+    // u8 *data;
 } mbStorage_t;
 
 /*------------------------------------------------------------------------------

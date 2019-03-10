@@ -6519,6 +6519,171 @@ static int h264e_intra_choose_4x4(const pix_t *blockin, pix_t *blockpred, int av
     return best_m + (best_sad << 4);
 }
 
+static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int avail, const pix_t *edge, int mpred, int penalty, int mode_decode)
+{
+    int sad, best_sad, best_m = 2;
+
+    uint32_t r0, r1, r2, r3;
+    uint32_t x0, x1, x2, x3, x;
+
+    r0 = ((uint32_t *)blockin)[ 0];
+    r1 = ((uint32_t *)blockin)[ 4];
+    r2 = ((uint32_t *)blockin)[ 8];
+    r3 = ((uint32_t *)blockin)[12];
+
+    if (mode_decode == 2) {
+        // DC
+        x0 = x1 = x2 = x3 = intra_predict_dc((avail & AVAIL_L) ? &L3 : 0, (avail & AVAIL_T) ? &U0 : 0, 2);
+        best_sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3);
+        if (2 != mpred)
+        {
+            best_sad += penalty;
+        }
+    }
+    ((uint32_t *)blockpred)[ 0] = x0;
+    ((uint32_t *)blockpred)[ 4] = x1;
+    ((uint32_t *)blockpred)[ 8] = x2;
+    ((uint32_t *)blockpred)[12] = x3;
+
+
+    if (avail & AVAIL_T)
+    {
+        uint32_t save = *(uint32_t*)&U4;
+        if (mode_decode == 0) {
+            uint32_t save = *(uint32_t*)&U4;
+            if (!(avail & AVAIL_TR))
+            {
+                *(uint32_t*)&U4 = U3*0x01010101u;
+            }
+
+            x0 = x1 = x2 = x3 = *(uint32_t*)&U0;
+        }
+        if (mode_decode == 3) {
+            x  = ((U6 + 3u*U7      + 2u) >> 2) << 24;
+            x |= ((U5 + 2u*U6 + U7 + 2u) >> 2) << 16;
+            x |= ((U4 + 2u*U5 + U6 + 2u) >> 2) << 8;
+            x |= ((U3 + 2u*U4 + U5 + 2u) >> 2);
+
+            x3 = x;
+            x = (x << 8) | ((U2 + 2u*U3 + U4 + 2u) >> 2);
+            x2 = x;
+            x = (x << 8) | ((T1 + 2u*U2 + U3 + 2u) >> 2);
+            x1 = x;
+            x = (x << 8) | ((U0 + 2u*T1 + U2 + 2u) >> 2);
+            x0 = x;
+        }
+        
+        
+        if (mode_decode == 7) {
+            x3 = x1;
+            x1 = x0;
+
+            x  = ((U4 + U5 + 1u) >> 1) << 24;
+            x |= ((U3 + U4 + 1u) >> 1) << 16;
+            x |= ((U2 + U3 + 1u) >> 1) << 8;
+            x |= ((T1 + U2 + 1u) >> 1);
+            x2 = x;
+            x = (x << 8) | ((U0 + T1 + 1) >> 1);
+            x0 = x;
+        }
+        
+
+        *(uint32_t*)&U4 = save;
+    }
+
+    if (avail & AVAIL_L)
+    {
+        if (mode_decode == 1) {
+            x0 = 0x01010101u * L0;
+            x1 = 0x01010101u * L1;
+            x2 = 0x01010101u * L2;
+            x3 = 0x01010101u * L3;
+        }
+
+        if(mode_decode == 8) {
+            x = x3;
+            x <<= 16;
+            x |= ((L2 + 3u*L3 + 2u) >> 2) << 8;
+            x |= ((L2 + L3 + 1u) >> 1);
+            x2 = x;
+            x <<= 16;
+            x |= ((L1 + 2u*L2 + L3 + 2u) >> 2) << 8;
+            x |= ((L1 + L2 + 1u) >> 1);
+            x1 = x;
+            x <<= 16;
+            x |= ((L0 + 2u*L1 + L2 + 2u) >> 2) << 8;
+            x |= ((L0 + L1 + 1u) >> 1);
+            x0 = x;
+        }
+        
+    }
+
+    if ((avail & (AVAIL_T | AVAIL_L | AVAIL_TL)) == (AVAIL_T | AVAIL_L | AVAIL_TL))
+    {
+        uint32_t line0, line3;
+        if (mode_decode == 4){
+            x  = ((U3 + 2u*U2 + T1 + 2u) >> 2) << 24;
+            x |= ((U2 + 2u*T1 + U0 + 2u) >> 2) << 16;
+            x |= ((T1 + 2u*U0 + UL + 2u) >> 2) << 8;
+            x |= ((U0 + 2u*UL + L0 + 2u) >> 2);
+            line0 = x;
+            x0 = x;
+            x = (x << 8) | ((UL + 2u*L0 + L1 + 2u) >> 2);
+            x1 = x;
+            x = (x << 8) | ((L0 + 2u*L1 + L2 + 2u) >> 2);
+            x2 = x;
+            x = (x << 8) | ((L1 + 2u*L2 + L3 + 2u) >> 2);
+            x3 = x;
+            line3 = x;
+        }
+
+        if (mode_decode == 6){
+            x = x0 << 8;
+            x |= ((UL + L0 + 1u) >> 1);
+            x0 = x;
+            x <<= 8;
+            x |= (line3 >> 16) & 0xff;
+            x <<= 8;
+            x |= ((L0 + L1 + 1u) >> 1);
+            x1 = x;
+            x <<= 8;
+            x |= (line3 >> 8) & 0xff;
+            x <<= 8;
+            x |= ((L1 + L2 + 1u) >> 1);
+            x2 = x;
+            x <<= 8;
+            x |= line3 & 0xff;
+            x <<= 8;
+            x |= ((L2 + L3 + 1u) >> 1);
+            x3 = x;
+        }
+
+        if(mode_decode == 5) {
+            x1 = line0;
+            x3 = (x1 << 8) | ((line3 >> 8) & 0xFF);
+
+            x  = ((U2 + U3 + 1u) >> 1) << 24;
+            x |= ((T1 + U2 + 1u) >> 1) << 16;
+            x |= ((U0 + T1 + 1u) >> 1) << 8;
+            x |= ((UL + U0 + 1u) >> 1);
+            x0 = x;
+            x = (x << 8) | ((line3 >> 16) & 0xFF);
+            x2 = x;
+        }
+        
+    }
+    if (mode_decode != 2) {
+        best_sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3);
+    }
+    ((uint32_t *)blockpred)[ 0] = x0; 
+    ((uint32_t *)blockpred)[ 4] = x1; 
+    ((uint32_t *)blockpred)[ 8] = x2; 
+    ((uint32_t *)blockpred)[12] = x3; 
+    best_m = mode_decode;
+    return best_m + (best_sad << 4);
+}
+
+
 static uint8_t byteclip(int x)
 {
     if (x > 255) x = 255;
@@ -9450,9 +9615,17 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
     if (mb->mbLayer.mbType == P_Skip) {
         enc->mb.type = -1;
     }
-    if (enc->slice.type == SLICE_TYPE_I && mb->mbLayer.mbType >= 7) {
-        enc->mb.type = 6;
-        // if (enc->mb.type >= 6) enc->mb.type = 6;
+    if (enc->slice.type == SLICE_TYPE_I) {
+        if (mb->mbLayer.mbType >= 7)
+            enc->mb.type = 6;
+        else if(mb->mbLayer.mbType == I_4x4) {
+            // enc->mb.type = 5;
+            // for (int id = 0; id < 16; id++) {
+            //     if (enc->mb.i4x4_mode[id] != -1)
+            //         enc->mb.i4x4_mode[id] = mb->mbLayer.mbPred.remIntra4x4PredMode[id];
+            // }
+            
+        }
     }
 l_skip:
     if (enc->mb.type == -1)
@@ -9477,8 +9650,13 @@ l_skip:
         if (enc->mb.type != 5)
         {
             unsigned nz_mask;
-
-            nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
+            // if (enc->slice.type == SLICE_TYPE_I && enc->mb.type == 6) {
+            //     // memset(enc->pbest, 0, 256 * sizeof(pix_t));
+            //     nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
+            // } else {
+                nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
+            // }
+            
             enc->scratch->nz_mask = (uint16_t)nz_mask;
             if (intra16x16_flag)
             {
@@ -9584,9 +9762,11 @@ l_skip:
             UE(mb_type);
 
         if (enc->slice.type == SLICE_TYPE_I) {
-            printf("%2d,%2d ", mb_type, mb->mbLayer.mbType - 6);
+            printf("%2d,%2d ", mb_type, (mb->mbLayer.mbType>= 7) ? 1:mb->mbLayer.mbType - 6);
             // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
-            // printf("%2d", enc->mb.type);
+            // printf("%2d", enc->mb.type + 1);
+            // if (enc->mb.type == 5) printf("%2d,%2d", enc->mb.i4x4_mode[0], mb->mbLayer.mbPred.remIntra4x4PredMode[0]);
+            // else printf(" n, n");
             if (enc->mb.x == enc->frame.nmbx - 1) {
                 printf("\n");
             }
@@ -9853,10 +10033,10 @@ static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
             mpred = 2;
         }
 
+        // sad = h264e_intra_choose_4x4_2(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]), mbLayer.mbPred.remIntra4x4PredMode[n]);
         sad = h264e_intra_choose_4x4(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]));
         mode = sad & 15;
         sad >>= 4;
-
         *ctx_l = *ctx_t = (int8_t)mode;
         if (mode == mpred)
         {
@@ -9892,7 +10072,7 @@ static void intra_choose_4x4(h264e_enc_t *enc, macroblockLayer_t mbLayer)
     }
     enc->scratch->nz_mask = (uint16_t)nz_mask;
 
-    if (cost < enc->mb.cost)
+    if (cost < enc->mb.cost || mbLayer.mbType == I_4x4)
     {
         enc->mb.cost = cost;
         enc->mb.type = 5;   // intra 4x4
@@ -9961,7 +10141,7 @@ static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int av
 {
     int sad, sad4[4];
     // heuristic mode decision
-    enc->mb.i16.pred_mode_luma = intra_estimate_16x16(enc->scratch->mb_pix_inp, 16, avail, enc->rc.qp);
+    // enc->mb.i16.pred_mode_luma = intra_estimate_16x16(enc->scratch->mb_pix_inp, 16, avail, enc->rc.qp);
     enc->mb.i16.pred_mode_luma = mbLayer.mbPred.intraChromaPredMode;
     if(enc->mb.i16.pred_mode_luma == 3) enc->mb.i16.pred_mode_luma = 0;
     if(enc->mb.i16.pred_mode_luma == 2) enc->mb.i16.pred_mode_luma = 0;
