@@ -6522,7 +6522,7 @@ static int h264e_intra_choose_4x4(const pix_t *blockin, pix_t *blockpred, int av
 static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int avail, const pix_t *edge, int mpred, int penalty, int mode_decode)
 {
     int sad, best_sad, best_m = 2;
-    best_m = mode_decode;
+
     uint32_t r0, r1, r2, r3;
     uint32_t x0, x1, x2, x3, x;
 
@@ -6530,151 +6530,146 @@ static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int 
     r1 = ((uint32_t *)blockin)[ 4];
     r2 = ((uint32_t *)blockin)[ 8];
     r3 = ((uint32_t *)blockin)[12];
-
-    if (mode_decode == 2) {
-        // DC
-        x0 = x1 = x2 = x3 = intra_predict_dc((avail & AVAIL_L) ? &L3 : 0, (avail & AVAIL_T) ? &U0 : 0, 2);
-        best_sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3);
-        if (2 != mpred)
-        {
-            best_sad += penalty;
+#undef TEST
+#define TEST(mode) sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3); \
+        if (mode != mpred) sad += penalty;    \
+        if (mode_decode == mode)              \
+        {                                     \
+            ((uint32_t *)blockpred)[ 0] = x0; \
+            ((uint32_t *)blockpred)[ 4] = x1; \
+            ((uint32_t *)blockpred)[ 8] = x2; \
+            ((uint32_t *)blockpred)[12] = x3; \
+            best_sad = sad;                   \
+            best_m = mode;                    \
+            return best_m + (best_sad << 4);  \
         }
+
+    // DC
+    x0 = x1 = x2 = x3 = intra_predict_dc((avail & AVAIL_L) ? &L3 : 0, (avail & AVAIL_T) ? &U0 : 0, 2);
+    best_sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3);
+    if (2 != mpred)
+    {
+        best_sad += penalty;
     }
+    ((uint32_t *)blockpred)[ 0] = x0;
+    ((uint32_t *)blockpred)[ 4] = x1;
+    ((uint32_t *)blockpred)[ 8] = x2;
+    ((uint32_t *)blockpred)[12] = x3;
 
     if (avail & AVAIL_T)
     {
         uint32_t save = *(uint32_t*)&U4;
-        if (mode_decode == 0) {
-            uint32_t save = *(uint32_t*)&U4;
-            if (!(avail & AVAIL_TR))
-            {
-                *(uint32_t*)&U4 = U3*0x01010101u;
-            }
-
-            x0 = x1 = x2 = x3 = *(uint32_t*)&U0;
+        if (!(avail & AVAIL_TR))
+        {
+            *(uint32_t*)&U4 = U3*0x01010101u;
         }
-        if (mode_decode == 3) {
-            x  = ((U6 + 3u*U7      + 2u) >> 2) << 24;
-            x |= ((U5 + 2u*U6 + U7 + 2u) >> 2) << 16;
-            x |= ((U4 + 2u*U5 + U6 + 2u) >> 2) << 8;
-            x |= ((U3 + 2u*U4 + U5 + 2u) >> 2);
 
-            x3 = x;
-            x = (x << 8) | ((U2 + 2u*U3 + U4 + 2u) >> 2);
-            x2 = x;
-            x = (x << 8) | ((T1 + 2u*U2 + U3 + 2u) >> 2);
-            x1 = x;
-            x = (x << 8) | ((U0 + 2u*T1 + U2 + 2u) >> 2);
-            x0 = x;
-        }
-        
-        
-        if (mode_decode == 7) {
-            x3 = x1;
-            x1 = x0;
+        x0 = x1 = x2 = x3 = *(uint32_t*)&U0;
+        TEST(0)
 
-            x  = ((U4 + U5 + 1u) >> 1) << 24;
-            x |= ((U3 + U4 + 1u) >> 1) << 16;
-            x |= ((U2 + U3 + 1u) >> 1) << 8;
-            x |= ((T1 + U2 + 1u) >> 1);
-            x2 = x;
-            x = (x << 8) | ((U0 + T1 + 1) >> 1);
-            x0 = x;
-        }
-        
+        x  = ((U6 + 3u*U7      + 2u) >> 2) << 24;
+        x |= ((U5 + 2u*U6 + U7 + 2u) >> 2) << 16;
+        x |= ((U4 + 2u*U5 + U6 + 2u) >> 2) << 8;
+        x |= ((U3 + 2u*U4 + U5 + 2u) >> 2);
+
+        x3 = x;
+        x = (x << 8) | ((U2 + 2u*U3 + U4 + 2u) >> 2);
+        x2 = x;
+        x = (x << 8) | ((T1 + 2u*U2 + U3 + 2u) >> 2);
+        x1 = x;
+        x = (x << 8) | ((U0 + 2u*T1 + U2 + 2u) >> 2);
+        x0 = x;
+        TEST(3)
+
+        x3 = x1;
+        x1 = x0;
+
+        x  = ((U4 + U5 + 1u) >> 1) << 24;
+        x |= ((U3 + U4 + 1u) >> 1) << 16;
+        x |= ((U2 + U3 + 1u) >> 1) << 8;
+        x |= ((T1 + U2 + 1u) >> 1);
+        x2 = x;
+        x = (x << 8) | ((U0 + T1 + 1) >> 1);
+        x0 = x;
+        TEST(7)
 
         *(uint32_t*)&U4 = save;
     }
 
     if (avail & AVAIL_L)
     {
-        if (mode_decode == 1) {
-            x0 = 0x01010101u * L0;
-            x1 = 0x01010101u * L1;
-            x2 = 0x01010101u * L2;
-            x3 = 0x01010101u * L3;
-        }
+        x0 = 0x01010101u * L0;
+        x1 = 0x01010101u * L1;
+        x2 = 0x01010101u * L2;
+        x3 = 0x01010101u * L3;
+        TEST(1)
 
-        if(mode_decode == 8) {
-            x = x3;
-            x <<= 16;
-            x |= ((L2 + 3u*L3 + 2u) >> 2) << 8;
-            x |= ((L2 + L3 + 1u) >> 1);
-            x2 = x;
-            x <<= 16;
-            x |= ((L1 + 2u*L2 + L3 + 2u) >> 2) << 8;
-            x |= ((L1 + L2 + 1u) >> 1);
-            x1 = x;
-            x <<= 16;
-            x |= ((L0 + 2u*L1 + L2 + 2u) >> 2) << 8;
-            x |= ((L0 + L1 + 1u) >> 1);
-            x0 = x;
-        }
-        
+        x = x3;
+        x <<= 16;
+        x |= ((L2 + 3u*L3 + 2u) >> 2) << 8;
+        x |= ((L2 + L3 + 1u) >> 1);
+        x2 = x;
+        x <<= 16;
+        x |= ((L1 + 2u*L2 + L3 + 2u) >> 2) << 8;
+        x |= ((L1 + L2 + 1u) >> 1);
+        x1 = x;
+        x <<= 16;
+        x |= ((L0 + 2u*L1 + L2 + 2u) >> 2) << 8;
+        x |= ((L0 + L1 + 1u) >> 1);
+        x0 = x;
+        TEST(8)
     }
 
     if ((avail & (AVAIL_T | AVAIL_L | AVAIL_TL)) == (AVAIL_T | AVAIL_L | AVAIL_TL))
     {
         uint32_t line0, line3;
-        if (mode_decode == 4){
-            x  = ((U3 + 2u*U2 + T1 + 2u) >> 2) << 24;
-            x |= ((U2 + 2u*T1 + U0 + 2u) >> 2) << 16;
-            x |= ((T1 + 2u*U0 + UL + 2u) >> 2) << 8;
-            x |= ((U0 + 2u*UL + L0 + 2u) >> 2);
-            line0 = x;
-            x0 = x;
-            x = (x << 8) | ((UL + 2u*L0 + L1 + 2u) >> 2);
-            x1 = x;
-            x = (x << 8) | ((L0 + 2u*L1 + L2 + 2u) >> 2);
-            x2 = x;
-            x = (x << 8) | ((L1 + 2u*L2 + L3 + 2u) >> 2);
-            x3 = x;
-            line3 = x;
-        }
+        x  = ((U3 + 2u*U2 + T1 + 2u) >> 2) << 24;
+        x |= ((U2 + 2u*T1 + U0 + 2u) >> 2) << 16;
+        x |= ((T1 + 2u*U0 + UL + 2u) >> 2) << 8;
+        x |= ((U0 + 2u*UL + L0 + 2u) >> 2);
+        line0 = x;
+        x0 = x;
+        x = (x << 8) | ((UL + 2u*L0 + L1 + 2u) >> 2);
+        x1 = x;
+        x = (x << 8) | ((L0 + 2u*L1 + L2 + 2u) >> 2);
+        x2 = x;
+        x = (x << 8) | ((L1 + 2u*L2 + L3 + 2u) >> 2);
+        x3 = x;
+        line3 = x;
+        TEST(4)
 
-        if (mode_decode == 6){
-            x = x0 << 8;
-            x |= ((UL + L0 + 1u) >> 1);
-            x0 = x;
-            x <<= 8;
-            x |= (line3 >> 16) & 0xff;
-            x <<= 8;
-            x |= ((L0 + L1 + 1u) >> 1);
-            x1 = x;
-            x <<= 8;
-            x |= (line3 >> 8) & 0xff;
-            x <<= 8;
-            x |= ((L1 + L2 + 1u) >> 1);
-            x2 = x;
-            x <<= 8;
-            x |= line3 & 0xff;
-            x <<= 8;
-            x |= ((L2 + L3 + 1u) >> 1);
-            x3 = x;
-        }
+        x = x0 << 8;
+        x |= ((UL + L0 + 1u) >> 1);
+        x0 = x;
+        x <<= 8;
+        x |= (line3 >> 16) & 0xff;
+        x <<= 8;
+        x |= ((L0 + L1 + 1u) >> 1);
+        x1 = x;
+        x <<= 8;
+        x |= (line3 >> 8) & 0xff;
+        x <<= 8;
+        x |= ((L1 + L2 + 1u) >> 1);
+        x2 = x;
+        x <<= 8;
+        x |= line3 & 0xff;
+        x <<= 8;
+        x |= ((L2 + L3 + 1u) >> 1);
+        x3 = x;
+        TEST(6)
 
-        if(mode_decode == 5) {
-            x1 = line0;
-            x3 = (x1 << 8) | ((line3 >> 8) & 0xFF);
+        x1 = line0;
+        x3 = (x1 << 8) | ((line3 >> 8) & 0xFF);
 
-            x  = ((U2 + U3 + 1u) >> 1) << 24;
-            x |= ((T1 + U2 + 1u) >> 1) << 16;
-            x |= ((U0 + T1 + 1u) >> 1) << 8;
-            x |= ((UL + U0 + 1u) >> 1);
-            x0 = x;
-            x = (x << 8) | ((line3 >> 16) & 0xFF);
-            x2 = x;
-        }
-        
+        x  = ((U2 + U3 + 1u) >> 1) << 24;
+        x |= ((T1 + U2 + 1u) >> 1) << 16;
+        x |= ((U0 + T1 + 1u) >> 1) << 8;
+        x |= ((UL + U0 + 1u) >> 1);
+        x0 = x;
+        x = (x << 8) | ((line3 >> 16) & 0xFF);
+        x2 = x;
+        TEST(5)
     }
-    if (mode_decode != 2) {
-        best_sad = pix_sad_4(r0, r1, r2, r3, x0, x1, x2, x3);
-    }
-    ((uint32_t *)blockpred)[ 0] = x0; 
-    ((uint32_t *)blockpred)[ 4] = x1; 
-    ((uint32_t *)blockpred)[ 8] = x2; 
-    ((uint32_t *)blockpred)[12] = x3; 
-    best_m = mode_decode;
     return best_m + (best_sad << 4);
 }
 
@@ -10027,13 +10022,13 @@ static void intra_choose_4x4(h264e_enc_t *enc, mbStorage_t *mb)
         {
             mpred = 2;
         }
-
         sad = h264e_intra_choose_4x4_2(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]), mb->intra4x4PredMode[decode_block_scan[n]]);
         // sad = h264e_intra_choose_4x4(blockin, block, a, edge, mpred, MUL_LAMBDA(3, g_lambda_q4[enc->rc.qp]));
         mode = sad & 15;
         sad >>= 4;
         *ctx_l = *ctx_t = (int8_t)mode;
         if (mode == mpred)
+        // if(mb->mbLayer.mbPred.prevIntra4x4PredModeFlag[decode_block_scan[n]] == 1)
         {
             mode = -1;
         } else if (mode > mpred)
