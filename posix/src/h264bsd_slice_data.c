@@ -181,7 +181,7 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
-        // if (IS_I_SLICE(pSliceHeader->sliceType)) {
+        // if (IS_P_SLICE(pSliceHeader->sliceType)) {
         //     u32 constrainedIntraPredFlag = pStorage->activePps->constrainedIntraPredFlag;
         //     u32 availableA, availableB, availableC, availableD;
         //     mbStorage_t *pMb = pStorage->mb + currMbAddr;
@@ -200,7 +200,9 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         //     // printf("%2d", availableD);
 
         //     int mbType = mbLayer->mbType;
-        //     printf("%2d", mbType);
+        //     if (mbType >= 7)
+        //         printf("%2d", mbType);
+        //     else printf("%2d", 0);
         //     if (mbCount % pStorage->activeSps->picWidthInMbs == pStorage->activeSps->picWidthInMbs - 1) printf("\n");
         // }
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,

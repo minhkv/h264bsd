@@ -393,7 +393,7 @@ void decodeContent(u8 *contentBuffer, size_t contentSize)
       // printf("Encode frame: %d\n", numPics);
       encode(width, height, outputFile, fout, dec, numPics - 1);
       // YUV_read_and_show(pic, width, height, numPics);
-      // if (IS_I_SLICE(dec.sliceHeader->sliceType))
+      // if (IS_P_SLICE(dec.sliceHeader->sliceType))
       //   cvWaitKey(0);
       break;
     case H264BSD_HDRS_RDY:

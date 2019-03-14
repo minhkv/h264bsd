@@ -9604,16 +9604,16 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
     // if (mb->mbLayer.mbType == P_Skip) {
     //     enc->mb.type = -1;
     // }
-    if (enc->slice.type == SLICE_TYPE_I) {
-        if (mb->mbLayer.mbType >= 7)
-            enc->mb.type = 6;
-    }
+    // if (enc->slice.type == SLICE_TYPE_I) {
+    //     if (mb->mbLayer.mbType >= 7)
+    //         enc->mb.type = 6;
+    // }
 l_skip:
     if (enc->mb.type == -1)
     {
         // encode skip macroblock
         assert(enc->slice.type != SLICE_TYPE_I);
-
+        // printf("%2d", enc->mb.type + 1);
         // Increment run count
         enc->mb.skip_run++;
 
@@ -9737,10 +9737,12 @@ l_skip:
         if (!base_mode)
             UE(mb_type);
 
-        if (enc->slice.type == SLICE_TYPE_I) {
+        if (enc->slice.type == SLICE_TYPE_P) {
             // printf("%2d,%2d ", mb_type, (mb->mbLayer.mbType>= 7) ? 1:mb->mbLayer.mbType - 6);
             // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
-            // printf("%2d", enc->mb.type + 1);
+            // if (enc->mb.type >= 6)
+            //     printf("%2d", enc->mb.type + 1);
+            // else printf("%2d", 0);
             // if (enc->mb.type == 5) printf("%2d,%2d", enc->mb.i4x4_mode[0], mb->mbLayer.mbPred.remIntra4x4PredMode[0]);
             // else printf(" n, n");
             // if (enc->mb.x == enc->frame.nmbx - 1) {
@@ -10130,7 +10132,8 @@ static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int av
         + MUL_LAMBDA(bitsize_ue(enc->mb.i16.pred_mode_luma + 1), g_lambda_q4[enc->rc.qp]) // side-info penalty
         + g_lambda_i16_q4[enc->rc.qp];                                                    // block kind penalty
 
-    if (sad < enc->mb.cost)
+    // if (sad < enc->mb.cost)
+    if (mbLayer.mbType >= 7)
     {
         enc->mb.cost = sad;
         enc->mb.type = 6;
@@ -11683,7 +11686,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
                 dec.picSizeInMbs, currMbAddr);
 
         } while (++enc->mb.x < enc->frame.nmbx);
-        
+
         for (i = 0, k = 16; i < 3; i++, k = 8)
         {
             enc->dec.yuv[i] += k*(enc->dec.stride[i] - enc->frame.nmbx);
