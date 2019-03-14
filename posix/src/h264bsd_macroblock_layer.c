@@ -1116,25 +1116,12 @@ u32 h264bsdDecodeMacroblock(mbStorage_t *pMb, macroblockLayer_t *pMbLayer,
 #else
         if (h264bsdMbPartPredMode(mbType) != PRED_MODE_INTER)
         {
-            // h264bsdWriteMacroblock(currImage, data);
-
             tmp = h264bsdIntraPrediction(pMb, pMbLayer, currImage, mbNum,
                 constrainedIntraPredFlag, (u8*)data);
             if (tmp != HANTRO_OK) return (tmp);
         }
         else
         {
-
-            // if (pMb->mbType != P_Skip)
-            // {
-            //     h264bsdWriteOutputBlocks(currImage, mbNum, data,
-            //         pMbLayer->residual.level);
-            // }
-            // else
-            // {
-            //     h264bsdWriteMacroblock(currImage, data);
-            // }
-
             tmp = h264bsdInterPrediction(pMb, pMbLayer, dpb, mbNum,
                 currImage, (u8*)data);
             if (tmp != HANTRO_OK) return (tmp);

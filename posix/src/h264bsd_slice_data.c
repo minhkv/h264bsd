@@ -181,28 +181,28 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
-        if (IS_I_SLICE(pSliceHeader->sliceType)) {
-            u32 constrainedIntraPredFlag = pStorage->activePps->constrainedIntraPredFlag;
-            u32 availableA, availableB, availableC, availableD;
-            mbStorage_t *pMb = pStorage->mb + currMbAddr;
-            availableA = h264bsdIsNeighbourAvailable(pMb, pMb->mbA);
-            if (availableA && constrainedIntraPredFlag &&
-                (h264bsdMbPartPredMode(pMb->mbA->mbType) == PRED_MODE_INTER))
-                availableA = HANTRO_FALSE;
-            availableB = h264bsdIsNeighbourAvailable(pMb, pMb->mbB);
-            if (availableB && constrainedIntraPredFlag &&
-                (h264bsdMbPartPredMode(pMb->mbB->mbType) == PRED_MODE_INTER))
-                availableB = HANTRO_FALSE;
-            availableD = h264bsdIsNeighbourAvailable(pMb, pMb->mbD);
-            if (availableD && constrainedIntraPredFlag &&
-                (h264bsdMbPartPredMode(pMb->mbD->mbType) == PRED_MODE_INTER))
-                availableD = HANTRO_FALSE;
-            // printf("%2d", availableD);
+        // if (IS_I_SLICE(pSliceHeader->sliceType)) {
+        //     u32 constrainedIntraPredFlag = pStorage->activePps->constrainedIntraPredFlag;
+        //     u32 availableA, availableB, availableC, availableD;
+        //     mbStorage_t *pMb = pStorage->mb + currMbAddr;
+        //     availableA = h264bsdIsNeighbourAvailable(pMb, pMb->mbA);
+        //     if (availableA && constrainedIntraPredFlag &&
+        //         (h264bsdMbPartPredMode(pMb->mbA->mbType) == PRED_MODE_INTER))
+        //         availableA = HANTRO_FALSE;
+        //     availableB = h264bsdIsNeighbourAvailable(pMb, pMb->mbB);
+        //     if (availableB && constrainedIntraPredFlag &&
+        //         (h264bsdMbPartPredMode(pMb->mbB->mbType) == PRED_MODE_INTER))
+        //         availableB = HANTRO_FALSE;
+        //     availableD = h264bsdIsNeighbourAvailable(pMb, pMb->mbD);
+        //     if (availableD && constrainedIntraPredFlag &&
+        //         (h264bsdMbPartPredMode(pMb->mbD->mbType) == PRED_MODE_INTER))
+        //         availableD = HANTRO_FALSE;
+        //     // printf("%2d", availableD);
 
-            int mbType = mbLayer->mbType;
-            printf("%2d", mbType);
-            if (mbCount % pStorage->activeSps->picWidthInMbs == pStorage->activeSps->picWidthInMbs - 1) printf("\n");
-        }
+        //     int mbType = mbLayer->mbType;
+        //     printf("%2d", mbType);
+        //     if (mbCount % pStorage->activeSps->picWidthInMbs == pStorage->activeSps->picWidthInMbs - 1) printf("\n");
+        // }
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
             currImage, pStorage->dpb, &qpY, currMbAddr,
             pStorage->activePps->constrainedIntraPredFlag, data);

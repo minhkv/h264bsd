@@ -383,18 +383,18 @@ void decodeContent(u8 *contentBuffer, size_t contentSize)
     case H264BSD_PIC_RDY:
       pic = h264bsdNextOutputPicture(&dec, &picId, &isIdrPic, &numErrMbs);
       ++numPics;
-      printf("Decode frame: %d\n", numPics);
+      // printf("Decode frame: %d\n", numPics);
       if (outputPath)
       {
         savePic(pic, width, height, numPics);
       }
       if (comparePath)
         totalErrors += comparePics(pic, width, height, numPics);
-      printf("Encode frame: %d\n", numPics);
+      // printf("Encode frame: %d\n", numPics);
       encode(width, height, outputFile, fout, dec, numPics - 1);
-      YUV_read_and_show(pic, width, height, numPics);
-      if (IS_I_SLICE(dec.sliceHeader->sliceType))
-        cvWaitKey(0);
+      // YUV_read_and_show(pic, width, height, numPics);
+      // if (IS_I_SLICE(dec.sliceHeader->sliceType))
+      //   cvWaitKey(0);
       break;
     case H264BSD_HDRS_RDY:
       h264bsdCroppingParams(&dec, &croppingFlag, &left, &width, &top, &height);

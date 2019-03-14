@@ -6541,7 +6541,6 @@ static int h264e_intra_choose_4x4_2(const pix_t *blockin, pix_t *blockpred, int 
             ((uint32_t *)blockpred)[12] = x3; \
             best_sad = sad;                   \
             best_m = mode;                    \
-            return best_m + (best_sad << 4);  \
         }
 
     // DC
@@ -9602,20 +9601,12 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
         nz[3 - i] = nnz_left[i];
         nnz_left[i] = 0;
     }
-    if (mb->mbLayer.mbType == P_Skip) {
-        enc->mb.type = -1;
-    }
+    // if (mb->mbLayer.mbType == P_Skip) {
+    //     enc->mb.type = -1;
+    // }
     if (enc->slice.type == SLICE_TYPE_I) {
         if (mb->mbLayer.mbType >= 7)
             enc->mb.type = 6;
-        else if(mb->mbLayer.mbType == I_4x4) {
-            // enc->mb.type = 5;
-            // for (int id = 0; id < 16; id++) {
-            //     if (enc->mb.i4x4_mode[id] != -1)
-            //         enc->mb.i4x4_mode[id] = mb->mbLayer.mbPred.remIntra4x4PredMode[id];
-            // }
-            
-        }
     }
 l_skip:
     if (enc->mb.type == -1)
@@ -9640,17 +9631,12 @@ l_skip:
         if (enc->mb.type != 5)
         {
             unsigned nz_mask;
-            // if (enc->slice.type == SLICE_TYPE_I && enc->mb.type == 6) {
-            //     // memset(enc->pbest, 0, 256 * sizeof(pix_t));
-            //     nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
-            // } else {
-                nz_mask = h264e_transform_sub_quant_dequant2(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
-            // }
+            nz_mask = h264e_transform_sub_quant_dequant(qv->mb_pix_inp, enc->pbest, 16, intra16x16_flag ? QDQ_MODE_INTRA_16 : QDQ_MODE_INTER, qv->qy, enc->rc.qdat[0]);
             
             enc->scratch->nz_mask = (uint16_t)nz_mask;
             if (intra16x16_flag)
             {
-                h264e_quant_luma_dc2(qv->qy, qv->quant_dc, enc->rc.qdat[0]);
+                h264e_quant_luma_dc(qv->qy, qv->quant_dc, enc->rc.qdat[0]);
                 nz_mask = 0xFFFF;
             }
             h264e_transform_add2(enc->dec.yuv[0], enc->dec.stride[0], enc->pbest, qv->qy, 4, nz_mask << 16);
@@ -9752,14 +9738,14 @@ l_skip:
             UE(mb_type);
 
         if (enc->slice.type == SLICE_TYPE_I) {
-            printf("%2d,%2d ", mb_type, (mb->mbLayer.mbType>= 7) ? 1:mb->mbLayer.mbType - 6);
+            // printf("%2d,%2d ", mb_type, (mb->mbLayer.mbType>= 7) ? 1:mb->mbLayer.mbType - 6);
             // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
             // printf("%2d", enc->mb.type + 1);
             // if (enc->mb.type == 5) printf("%2d,%2d", enc->mb.i4x4_mode[0], mb->mbLayer.mbPred.remIntra4x4PredMode[0]);
             // else printf(" n, n");
-            if (enc->mb.x == enc->frame.nmbx - 1) {
-                printf("\n");
-            }
+            // if (enc->mb.x == enc->frame.nmbx - 1) {
+            //     printf("\n");
+            // }
         }
 
         if (enc->mb.type == 3) // 8x8
@@ -12061,8 +12047,8 @@ int H264E_encode(H264E_persist_t *enc, H264E_scratch_t *scratch, const H264E_run
         } else
 #endif
         {
-            // encode_sps(enc, 66);
-            encode_sps2(enc, dec);
+            encode_sps(enc, 66);
+            // encode_sps2(enc, dec);
             encode_pps(enc, 0);
             // encode_pps2(enc, dec);
         }
