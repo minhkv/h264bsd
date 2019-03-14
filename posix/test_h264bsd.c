@@ -162,7 +162,7 @@ static int sizeof_persist = 0, sizeof_scratch = 0, error;
 
 void init_encode(int width, int height)
 {
-  if(!read_cmdline_options()) return;
+  // if(!read_cmdline_options()) return;
 
   create_param.enableNEON = 1;
 #if H264E_SVC_API
@@ -431,7 +431,9 @@ void decodeContent(u8 *contentBuffer, size_t contentSize)
 int main(int argc, char *argv[])
 {
   int c;
-  while ((c = getopt(argc, argv, "ro:c:")) != -1)
+  read_cmdline_options();
+  cmdline->qp = DEFAULT_QP;
+  while ((c = getopt(argc, argv, "ro:c:q:")) != -1)
   {
     switch (c)
     {
@@ -444,10 +446,14 @@ int main(int argc, char *argv[])
     case 'r':
       repeatTest = 1;
       break;
+    case 'q':
+      cmdline->qp = atoi(optarg);
+      break;
     default:
       abort();
     }
   }
+  printf("qp = %d\n", cmdline->qp);
 
   if (argc < 2)
   {
