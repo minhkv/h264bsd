@@ -137,7 +137,7 @@ static int read_cmdline_options()
     int i;
     memset(cmdline, 0, sizeof(*cmdline));
     cmdline->gop = DEFAULT_GOP;
-    // cmdline->qp = DEFAULT_QP;
+    cmdline->qp = DEFAULT_QP;
     cmdline->max_frames = DEFAULT_MAX_FRAMES;
     cmdline->kbps = 0;
     //cmdline->kbps = 2048;

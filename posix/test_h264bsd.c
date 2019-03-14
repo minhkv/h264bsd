@@ -432,7 +432,6 @@ int main(int argc, char *argv[])
 {
   int c;
   read_cmdline_options();
-  cmdline->qp = DEFAULT_QP;
   while ((c = getopt(argc, argv, "ro:c:q:")) != -1)
   {
     switch (c)
