@@ -38,6 +38,7 @@
 #include "h264bsd_util.h"
 #include "h264bsd_vlc.h"
 #include "showImage.h"
+#include "minih264e.c"
 /*------------------------------------------------------------------------------
     2. External compiler flags
 --------------------------------------------------------------------------------
@@ -99,7 +100,8 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
     u32 mbCount;
     i32 qpY;
     macroblockLayer_t *mbLayer;
-
+    // mb_count_t mbStats;
+    // initMbStats(mbStats);
 /* Code */
 
     ASSERT(pStrmData);
@@ -181,6 +183,30 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
+        // switch(mbLayer->mbType) {
+        //     case 0:
+        //         mbStats.skip++;
+        //         break;
+        //     case 1:
+        //         mbStats.p16x16++;
+        //         break;
+        //     case 2:
+        //         mbStats.p16x8++;
+        //         break;
+        //     case 3:
+        //         break;
+        //     case 4:
+        //         mbStats.p8x8++;
+        //         break;
+        //     case 5:
+        //         break;
+        //     case 6:
+        //         mbStats.i4x4++;
+        //         break;
+        //     default:
+        //         mbStats.i16x16++;
+        //         break;
+        // }
         if (IS_P_SLICE(pSliceHeader->sliceType)) {
         //     u32 constrainedIntraPredFlag = pStorage->activePps->constrainedIntraPredFlag;
         //     u32 availableA, availableB, availableC, availableD;
@@ -199,7 +225,7 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         //         availableD = HANTRO_FALSE;
         //     // printf("%2d", availableD);
 
-            int mbType = mbLayer->mbType;
+            // int mbType = mbLayer->mbType;
         //     if (mbType >= 7)
                 // printf("%2d", mbType);
         //     else printf("%2d", 0);
@@ -242,6 +268,7 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         }
 
     } while (moreMbs);
+    // show_mb_stats(mbStats);
     if ((pStorage->slice->numDecodedMbs + mbCount) > pStorage->picSizeInMbs)
     {
         EPRINT("Num decoded mbs");

@@ -153,6 +153,32 @@ typedef struct
     int h;
 } frame_size_descriptor_t;
 
+typedef struct 
+{
+    int skip;
+    int p16x16;
+    int p16x8;
+    int p8x8;
+    int i4x4;
+    int i16x16;
+} mb_count_t;
+void initMbStats(mb_count_t mbStats) {
+    mbStats.skip = 0;
+    mbStats.p16x16 = 0;
+    mbStats.p16x8 = 0;
+    mbStats.p8x8 = 0;
+    mbStats.i4x4 = 0;
+    mbStats.i16x16 = 0;
+}
+void show_mb_stats(mb_count_t mbStats) {
+    printf("%6s: %2d\n", "skip", mbStats.skip);
+    printf("%6s: %2d\n", "p16x16", mbStats.p16x16);
+    printf("%6s: %2d\n", "p16x8", mbStats.p16x8);
+    printf("%6s: %2d\n", "p8x8", mbStats.p8x8);
+    printf("%6s: %2d\n", "i4x4", mbStats.i4x4);
+    printf("%6s: %2d\n", "i16x16", mbStats.i16x16);
+}
+
 static const frame_size_descriptor_t g_frame_size_descriptor[] =
 {
     {"sqcif",  128,   96},

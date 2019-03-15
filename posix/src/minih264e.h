@@ -10125,16 +10125,16 @@ static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int av
     // heuristic mode decision
     // enc->mb.i16.pred_mode_luma = intra_estimate_16x16(enc->scratch->mb_pix_inp, 16, avail, enc->rc.qp);
     enc->mb.i16.pred_mode_luma = mbLayer.mbPred.intraChromaPredMode;
-    if(enc->mb.i16.pred_mode_luma == 3) enc->mb.i16.pred_mode_luma = 0;
+    if(enc->mb.i16.pred_mode_luma == 3) enc->mb.i16.pred_mode_luma = 2;
     if(enc->mb.i16.pred_mode_luma == 2) enc->mb.i16.pred_mode_luma = 0;
     if(enc->mb.i16.pred_mode_luma == 0) enc->mb.i16.pred_mode_luma = 2;
     // run chosen predictor
     h264e_intra_predict_16x16(enc->ptest, left, top, enc->mb.i16.pred_mode_luma);
 
     // coding cost
-    // sad = h264e_sad_mb_unlaign_8x8(enc->scratch->mb_pix_inp, 16, enc->ptest, sad4)        // SAD
-    //     + MUL_LAMBDA(bitsize_ue(enc->mb.i16.pred_mode_luma + 1), g_lambda_q4[enc->rc.qp]) // side-info penalty
-    //     + g_lambda_i16_q4[enc->rc.qp];                                                    // block kind penalty
+    sad = h264e_sad_mb_unlaign_8x8(enc->scratch->mb_pix_inp, 16, enc->ptest, sad4)        // SAD
+        + MUL_LAMBDA(bitsize_ue(enc->mb.i16.pred_mode_luma + 1), g_lambda_q4[enc->rc.qp]) // side-info penalty
+        + g_lambda_i16_q4[enc->rc.qp];                                                    // block kind penalty
 
     // if (sad < enc->mb.cost)
     if (mbLayer.mbType >= 7)
