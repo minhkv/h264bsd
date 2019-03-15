@@ -1,4 +1,5 @@
 #include "h264bsd_storage.h"
+#include "mb_stats.h"
 #ifndef MINIH264_H
 #define MINIH264_H
 /*
@@ -11654,6 +11655,8 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
     int i, k;
     encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type, dec);
     u32 currMbAddr = dec.sliceHeader->firstMbInSlice;
+    mb_stats_t* mbStats = (mb_stats_t*) malloc(sizeof(mb_stats_t));
+    initMbStats(mbStats);
     // encode frame
     do
     {   // encode row
@@ -11672,7 +11675,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
             enc->dec.yuv[0] += 16;
             enc->dec.yuv[1] += 8;
             enc->dec.yuv[2] += 8;
-
+            addMbType(enc->mb.type + 1, mbStats);
             enc->mb.num++;  // before rc_mb_end
             if (enc->param.fine_rate_control_flag)
             {
@@ -11695,7 +11698,9 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
         enc->i4x4mode[0] = -1;
 
     } while (++enc->mb.y < enc->frame.nmby);
-
+    printf("%15s", "Encode frame: ");
+    showMbStats(mbStats);
+    free(mbStats);
     if (enc->mb.skip_run)
     {
         UE(enc->mb.skip_run);
