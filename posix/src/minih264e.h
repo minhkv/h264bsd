@@ -9608,6 +9608,10 @@ static void mb_write(h264e_enc_t *enc, int enc_type, int base_mode, mbStorage_t 
     //     if (mb->mbLayer.mbType >= 7)
     //         enc->mb.type = 6;
     // }
+    // if(enc->slice.type == SLICE_TYPE_P) {
+    //     if(mb->mbLayer.mbType == 1)
+    //         enc->mb.type = 0;
+    // }
 l_skip:
     if (enc->mb.type == -1)
     {
@@ -9741,7 +9745,7 @@ l_skip:
             // printf("%2d,%2d ", mb_type, (mb->mbLayer.mbType>= 7) ? 1:mb->mbLayer.mbType - 6);
             // printf("%2d,%2d ", enc->mb.i16.pred_mode_luma, mb->mbLayer.mbPred.intraChromaPredMode);
             // if (enc->mb.type >= 6)
-            //     printf("%2d", enc->mb.type + 1);
+                // printf("%2d", enc->mb.type + 1);
             // else printf("%2d", 0);
             // if (enc->mb.type == 5) printf("%2d,%2d", enc->mb.i4x4_mode[0], mb->mbLayer.mbPred.remIntra4x4PredMode[0]);
             // else printf(" n, n");
@@ -10128,9 +10132,9 @@ static void intra_choose_16x16(h264e_enc_t *enc, pix_t *left, pix_t *top, int av
     h264e_intra_predict_16x16(enc->ptest, left, top, enc->mb.i16.pred_mode_luma);
 
     // coding cost
-    sad = h264e_sad_mb_unlaign_8x8(enc->scratch->mb_pix_inp, 16, enc->ptest, sad4)        // SAD
-        + MUL_LAMBDA(bitsize_ue(enc->mb.i16.pred_mode_luma + 1), g_lambda_q4[enc->rc.qp]) // side-info penalty
-        + g_lambda_i16_q4[enc->rc.qp];                                                    // block kind penalty
+    // sad = h264e_sad_mb_unlaign_8x8(enc->scratch->mb_pix_inp, 16, enc->ptest, sad4)        // SAD
+    //     + MUL_LAMBDA(bitsize_ue(enc->mb.i16.pred_mode_luma + 1), g_lambda_q4[enc->rc.qp]) // side-info penalty
+    //     + g_lambda_i16_q4[enc->rc.qp];                                                    // block kind penalty
 
     // if (sad < enc->mb.cost)
     if (mbLayer.mbType >= 7)
@@ -10526,7 +10530,7 @@ static void mv_clusters_update(h264e_enc_t *enc, point_t mv)
 /**
 *   Choose inter mode: skip/coded, ME partition, find MV
 */
-static void inter_choose_mode(h264e_enc_t *enc)
+static void inter_choose_mode(h264e_enc_t *enc, macroblockLayer_t mbLayer)
 {
     int prefered_modes[4] = { 1, 0, 0, 0 };
     point_t mv_skip, mv_skip_a, mv_cand[MAX_MV_CAND];
@@ -10659,6 +10663,19 @@ static void inter_choose_mode(h264e_enc_t *enc)
 
     sad_best += me_mv_cost(mv_best, mv_pred_16x16, enc->rc.qp);
 
+    
+    if (mbLayer.mbType == 1)
+    {
+        enc->mb.type = 0;
+        enc->mb.cost = sad_skip + me_mv_cand_cost(mv_skip, mv_pred_16x16, enc->rc.qp);
+        enc->mb.mv [0] = mv_skip;
+        enc->mb.mvd[0] = mv_sub(mv_skip, mv_pred_16x16);
+
+        // assert(mv_in_rect(mv_skip_a, &enc->frame.mv_qpel_limit)) ;
+        interpolate_luma(ref_yuv, ref_stride, mv_skip_a, point(16, 16), enc->pbest);
+        interpolate_chroma(enc, mv_skip_a);
+        // return;
+    } else
     {
         int mb_type;
         point_t wh, part, mvpred_ctx[12], part_mv[4][16], part_mvd[4][16];
@@ -10995,7 +11012,7 @@ static void mb_encode(h264e_enc_t *enc, int enc_type, mbStorage_t *mb)
 
     if (enc->slice.type == SLICE_TYPE_P)
     {
-        inter_choose_mode(enc);
+        inter_choose_mode(enc, mb->mbLayer);
     }
 #if H264E_SVC_API
     else if (enc_type > 0 && enc->param.inter_layer_pred_flag)
@@ -11691,7 +11708,8 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
         {
             enc->dec.yuv[i] += k*(enc->dec.stride[i] - enc->frame.nmbx);
         }
-
+        // if (enc->slice.type == SLICE_TYPE_P)
+        //     printf("\n");
         // start new row
         enc->mb.x = 0;
         *((uint32_t*)(enc->nnz)) = *((uint32_t*)(enc->nnz + 4)) = 0x01010101 * NNZ_NA; // left edge of NNZ predictor
