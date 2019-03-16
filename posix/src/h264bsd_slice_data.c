@@ -38,6 +38,7 @@
 #include "h264bsd_util.h"
 #include "h264bsd_vlc.h"
 #include "showImage.h"
+#include "util.h"
 /*------------------------------------------------------------------------------
     2. External compiler flags
 --------------------------------------------------------------------------------
@@ -100,7 +101,8 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
     i32 qpY;
     macroblockLayer_t *mbLayer;
     mb_stats_t* mbStats = (mb_stats_t*) malloc(sizeof(mb_stats_t));
-    initMbStats(mbStats);
+    if(cmdline->debug)
+        initMbStats(mbStats);
 /* Code */
 
     ASSERT(pStrmData);
@@ -182,7 +184,8 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
-        addMbType(mbLayer->mbType, mbStats);
+        if(cmdline->debug)
+            addMbType(mbLayer->mbType, mbStats);
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
             currImage, pStorage->dpb, &qpY, currMbAddr,
             pStorage->activePps->constrainedIntraPredFlag, data);
@@ -220,8 +223,11 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
         }
 
     } while (moreMbs);
-    printf("%15s", "Decode frame: ");
-    showMbStats(mbStats);
+    if(cmdline->debug) {
+        printf("%15s", "Decode frame: ");
+        showMbStats(mbStats);
+    }
+    
     free(mbStats);
     if ((pStorage->slice->numDecodedMbs + mbCount) > pStorage->picSizeInMbs)
     {

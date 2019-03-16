@@ -6,6 +6,7 @@
 #define MINIH264_IMPLEMENTATION
 //#define MINIH264_ONLY_SIMD
 #include "minih264e.h"
+#include "util.h"
 #include "h264bsd_storage.h"
 
 #define DEFAULT_GOP 20
@@ -113,12 +114,7 @@ void h264e_thread_pool_run(void *pool, void (*callback)(void*), void *callback_j
 }
 #endif
 
-struct
-{
-    const char *input_file;
-    const char *output_file;
-    int gen, gop, qp, kbps, max_frames, threads, speed, denoise, stats, psnr;
-} cmdline[1];
+
 
 static int str_equal(const char *pattern, char **p)
 {
@@ -142,6 +138,7 @@ static int read_cmdline_options()
     cmdline->kbps = 0;
     //cmdline->kbps = 2048;
     cmdline->denoise = DEFAULT_DENOISE;
+    cmdline->debug = 0;
     
     return 1;
 }

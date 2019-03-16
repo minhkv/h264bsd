@@ -321,8 +321,8 @@ int encode(int width, int height, FILE *fin, FILE *fout, storage_t dec, int numP
           max_bytes = sizeof_coded_data - 4;
       }
 
-      // if (cmdline->stats)
-      printf("frame=%d, bytes=%d\n", frames++, sizeof_coded_data);
+      // if (cmdline->debug)
+        printf("frame=%d, bytes=%d\n", frames++, sizeof_coded_data);
 
       if (fout)
       {
@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
 {
   int c;
   read_cmdline_options();
-  while ((c = getopt(argc, argv, "ro:c:q:")) != -1)
+  while ((c = getopt(argc, argv, "ro:c:q:d:")) != -1)
   {
     switch (c)
     {
@@ -448,12 +448,15 @@ int main(int argc, char *argv[])
     case 'q':
       cmdline->qp = atoi(optarg);
       break;
+    case 'd':
+      cmdline->debug = atoi(optarg);
+      break;
     default:
       abort();
     }
   }
-  printf("qp = %d\n", cmdline->qp);
-
+  printf("qp=%d\n", cmdline->qp);
+  printf("debug=%d\n", cmdline->debug);
   if (argc < 2)
   {
     fprintf(stderr, "Usage: %s [-r] [-c <compare.yuv>] [-o <output.yuv>] <test_video.h264>\n", argv[0]);
