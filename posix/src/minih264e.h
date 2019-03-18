@@ -9641,7 +9641,7 @@ l_skip:
                 h264e_quant_luma_dc(qv->qy, qv->quant_dc, enc->rc.qdat[0]);
                 nz_mask = 0xFFFF;
             }
-            h264e_transform_add2(enc->dec.yuv[0], enc->dec.stride[0], enc->pbest, qv->qy, 4, nz_mask << 16);
+            h264e_transform_add(enc->dec.yuv[0], enc->dec.stride[0], enc->pbest, qv->qy, 4, nz_mask << 16);
         }
 
         // Coded Block Pattern for luma
@@ -11656,6 +11656,7 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
     int i, k;
     encode_slice_header(enc, frame_type, long_term_idx_use, long_term_idx_update, pps_id,enc_type, dec);
     u32 currMbAddr = dec.sliceHeader->firstMbInSlice;
+    bs_item_t *pos = enc->bs->buf;
     mb_stats_t* mbStats = (mb_stats_t*) malloc(sizeof(mb_stats_t));
     if(cmdline->debug) {
         initMbStats(mbStats);
@@ -11679,8 +11680,10 @@ static void encode_slice(h264e_enc_t *enc, int frame_type, int long_term_idx_use
             enc->dec.yuv[0] += 16;
             enc->dec.yuv[1] += 8;
             enc->dec.yuv[2] += 8;
-            if (cmdline->debug)
-                addMbType(enc->mb.type + 1, mbStats);
+            if (cmdline->debug){
+                addMbType(enc->mb.type + 1, enc->bs->buf - pos, mbStats);
+                pos = enc->bs->buf;
+            }
             enc->mb.num++;  // before rc_mb_end
             if (enc->param.fine_rate_control_flag)
             {
