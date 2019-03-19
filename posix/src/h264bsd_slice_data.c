@@ -103,6 +103,7 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
     mb_stats_t* mbStats = (mb_stats_t*) malloc(sizeof(mb_stats_t));
     if(cmdline->debug)
         initMbStats(mbStats);
+    u8 *pos = pStrmData->pStrmCurrPos;
 /* Code */
 
     ASSERT(pStrmData);
@@ -184,8 +185,11 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
-        if(cmdline->debug)
-            addMbType(mbLayer->mbType, 0, mbStats);
+        if(cmdline->debug) {
+            addMbType(mbLayer->mbType, (pStrmData->pStrmCurrPos - pos) / 8, mbStats);
+            pos = pStrmData->pStrmCurrPos;
+        }
+            
         tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
             currImage, pStorage->dpb, &qpY, currMbAddr,
             pStorage->activePps->constrainedIntraPredFlag, data);
