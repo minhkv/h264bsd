@@ -185,14 +185,15 @@ u32 h264bsdDecodeSliceData(strmData_t *pStrmData, storage_t *pStorage,
                 return(tmp);
             }
         }
+           
+        tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
+            currImage, pStorage->dpb, &qpY, currMbAddr,
+            pStorage->activePps->constrainedIntraPredFlag, data);
+
         if(cmdline->debug) {
             addMbType(mbLayer->mbType, (pStrmData->pStrmCurrPos - pos) / 8, mbStats);
             pos = pStrmData->pStrmCurrPos;
         }
-            
-        tmp = h264bsdDecodeMacroblock(pStorage->mb + currMbAddr, mbLayer,
-            currImage, pStorage->dpb, &qpY, currMbAddr,
-            pStorage->activePps->constrainedIntraPredFlag, data);
         
         if (tmp != HANTRO_OK)
         {
